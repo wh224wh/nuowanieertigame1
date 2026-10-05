@@ -1,0 +1,3695 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>诺瓦涅尔缇 · 研究所迷宫 回合战斗</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{overflow:hidden;background:#070709;font-family:system-ui}
+canvas{display:block;image-rendering:pixelated;}
+
+#updateNote{
+    width: 100%;
+    max-width: 320px;
+    overflow: hidden;
+    white-space: nowrap;
+    margin-top: 8px;
+    color: #88a8bb;
+    font-size: 12px;
+    text-shadow: 0 0 3px #000;
+    letter-spacing: 1px;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent);
+            mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent);
+}
+#updateNoteInner{
+    display: inline-block;
+    animation: scrollNote 7s linear infinite;
+}
+@keyframes scrollNote{
+    0%{ transform: translateX(100%); }
+    100%{ transform: translateX(-100%); }
+}
+#updateNoteInner{
+    display: inline-block;
+    animation: scrollNote 10s linear infinite;
+}
+@ scrollNote{
+    0%{ transform: translateX(-100%); }
+    100%{ transform: translateX(100%); }
+}
+
+#startScreen{
+    position: fixed;
+    inset: 0;
+    background: #050508;
+    z-index: 300;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 32px;
+    color: #d8e2ec;
+}
+#startScreen h1{
+    font-weight: normal;
+    letter-spacing: 6px;
+    font-size: 26px;
+}
+#startScreen p{
+    color: #778899;
+    font-size: 14px;
+}
+#startBtn{
+    padding: 16px 42px;
+    font-size: 18px;
+    border: 1px solid #446080;
+    background: #0f1520;
+    color: #cad8e8;
+    border-radius: 8px;
+}
+#startBtn:active{ background: #1b2638; }
+
+#joystick{
+    position:fixed;
+    left:40px;
+    bottom:40px;
+    width:140px;
+    height:140px;
+    border-radius:50%;
+    background:rgba(40,40,50,0.4);
+    touch-action:none;
+    z-index:10;
+    display:none;
+}
+#stick{
+    position:absolute;
+    width:60px;
+    height:60px;
+    border-radius:50%;
+    background:rgba(120,140,180,0.6);
+    left:40px;
+    top:40px
+}
+#ui{
+    #levelText{ color:#ffd266; font-weight:bold; }
+    position:fixed; top:12px; left:12px;
+    color:#eee; font-size:13px;
+    text-shadow:0 0 4px #000; z-index:10;
+    background:rgba(0,0,0,0.4);
+    padding:4px 8px;
+    border-radius:4px;
+}
+#equipUI{
+    position:fixed;
+    top: 40px;
+    left: 12px;
+    color:#bcc8da;
+    font-size: 13px;
+    z-index: 10;
+    line-height: 1.6;
+    max-width: 340px;
+}
+#bagUI{
+    position:fixed;
+    top: 90px;
+    left: 12px;
+    color:#bcc8da;
+    font-size: 13px;
+    z-index: 10;
+    line-height: 1.6;
+    max-width:340px;
+}
+
+/* ===== 饰品切换面板 ===== */
+#apToggle{
+
+    position:fixed; top:12px; right:12px; z-index:25;
+    padding:8px 16px; font-size:13px;
+    background:#1a2030; border:1px solid #3a4a66; color:#cbd5e6;
+    border-radius:6px;
+}
+#bagToggle{
+    position:fixed; top:12px; right:80px; z-index:25;
+    padding:8px 14px; font-size:12px;
+    background:#1a2030; border:1px solid #3a4a66;
+    color:#cbd5e6; border-radius:6px;
+}
+#bagPanel{
+    position:fixed; top:54px; right:12px; z-index:24;
+    width:280px; max-height:70vh;
+    overflow-y:auto;
+    background:#0d1220; border:1px solid #2a3550;
+    border-radius:8px; padding:10px; display:none;
+    color:#cbd5e6; font-size:13px;
+}
+#accessoryPanel{
+    position:fixed; top:54px; right:12px; z-index:24;
+    width:280px;
+    max-height:70vh;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    background:#0d1220; border:1px solid #2a3550;
+    border-radius:8px; padding:10px; display:none;
+    color:#cbd5e6; font-size:13px;
+    }
+.ap-title{ color:#7fb8e8; margin-bottom:8px; letter-spacing:2px; }
+.ap-item{
+    padding:8px; border:1px solid #24304a; border-radius:6px;
+    margin-bottom:6px; cursor:pointer; background:#111828;
+}
+.ap-item:hover{ background:#1a2438; }
+.ap-item.equipped{ border-color:#6fa8e8; box-shadow:0 0 8px #2a4a7a; }
+.ap-item .aname{ color:#e0e8f4; }
+.ap-item .adesc{ color:#7a8aa0; font-size:11px; margin-top:3px; }
+.ap-item .stat{ color:#ffd266; font-size:11px; margin-top:2px; }
+.mini-btn{
+    padding:5px 10px;
+    font-size:11px;
+    background:#243050;
+    border:1px solid #3a4a66;
+    color:#cfe0f0;
+    border-radius:4px;
+    cursor:pointer;
+}
+.mini-btn:hover{ background:#324464; }
+.ap-feed{ background:#2a2040; border-color:#5a3a7a; color:#e0c0ff; }
+.ch-take{ background:#204030; border-color:#3a6a4a; color:#c0f0d0; }
+
+/* ===== 战斗界面 ===== */
+#playerStatusBar{
+    position:fixed; top:0; left:0; right:0;
+    padding:8px 12px;
+    background:rgba(8,10,18,0.92);
+    border-bottom:1px solid #2a3550;
+    z-index:110;
+    display:none;
+    flex-direction:column;
+    gap:5px;
+    font-family:system-ui;
+}
+.statusRow{
+    display:flex; align-items:center;
+    gap:8px; font-size:11px;
+    color:#cbd5e6;
+}
+.statusLabel{
+    width:28px;
+    color:#7fb8e8;
+    letter-spacing:1px;
+    font-size:11px;
+    text-align:center;
+}
+.statusLabel.energy-mode{
+    color:#6ad8ff;
+    text-shadow:0 0 6px #6ad8ff;
+}
+.barWrap{
+    flex:1;
+    height:11px;
+    background:#0a0e16;
+    border:1px solid #2a3550;
+    border-radius:3px;
+    overflow:hidden;
+}
+#playerHpBar{
+    height:100%;
+    background:#4ae8a0;
+    width:100%;
+    transition:width 0.25s, background 0.25s;
+}
+#playerMpBar{
+    height:100%;
+    background:linear-gradient(90deg,#4a8aff,#2a5ac8);
+    width:100%;
+    transition:width 0.25s, background 0.25s;
+}
+#playerMpBar.energy-mode{
+    background:linear-gradient(90deg,#6ad8ff,#3a8ad8);
+    box-shadow:0 0 8px #6ad8ff;
+}
+.statusNum{
+    min-width:60px;
+    text-align:right;
+    font-family:monospace;
+    font-size:11px;
+    color:#cbd5e6;
+}
+#battleUI{
+    display:none; position:fixed; inset:0;
+    background:#08080c; z-index:100; color:#eee;
+    padding:100px 16px 90px 16px;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+}
+    display:none;
+    position:fixed;
+    inset:0;
+    background:#08080c;
+    z-index:100;
+    color:#eee;
+    padding:24px;
+    overflow:auto;
+}
+#playerDebuffBar{
+    display:flex; flex-wrap:wrap;
+    gap:4px;
+    margin-bottom:2px;
+    min-height:0;
+}
+.debuff-chip{
+    padding:1px 6px;
+    font-size:10px;
+    background:rgba(40,60,90,0.85);
+    border:1px solid #5a8ac8;
+    color:#cfe4ff;
+    border-radius:8px;
+    letter-spacing:1px;
+    font-family:system-ui;
+}
+.debuff-chip.stun{ background:rgba(120,80,20,0.85); border-color:#d8a040; color:#ffe8b0; }
+.debuff-chip.poison{ background:rgba(60,100,40,0.85); border-color:#6ac850; color:#d0ffb0; }
+.debuff-chip.suppress{ background:rgba(90,40,90,0.85); border-color:#c860c8; color:#ffd0ff; }
+.debuff-chip.conduct{ background:rgba(30,60,110,0.85); border-color:#4a8ae8; color:#c0e0ff; }
+.debuff-chip.thunder{ background:rgba(60,40,120,0.85); border-color:#8a6ae8; color:#d8c8ff; }
+#enemyArea{
+    text-align:center;
+    margin-bottom:8px;
+    position:relative;
+    min-height:130px;
+    height:auto;
+}
+#enemySprite{
+    width:100px;
+    height:110px;
+    margin:0 auto 4px;
+    background:#221414;
+    border:2px solid #442222;
+    position:relative;
+}
+#enemyList{
+    display:flex; flex-direction:column;
+    gap:4px;
+    margin:6px auto 8px;
+    max-width:280px;
+}
+.enemy-list-item{
+    display:flex; justify-content:space-between;
+    align-items:center;
+    padding:6px 10px;
+    background:rgba(30,20,20,0.9);
+    border:1px solid #442222;
+    border-radius:4px;
+    font-size:12px;
+    color:#cbd5e6;
+    cursor:pointer;
+}
+.enemy-list-item.selected{
+    border-color:#ffd266;
+    box-shadow:0 0 8px #ffd266;
+    background:rgba(50,35,15,0.9);
+}
+.enemy-list-item .elname{
+    color:#e0e8f4;
+}
+.enemy-list-item .elhp{
+    font-family:monospace;
+    color:#e89090;
+    font-size:11px;
+}
+#debuffTag{
+    margin-top:6px;
+    color:#77ccff;
+    min-height:18px;
+    font-size:13px;
+}
+.slash-effect{
+    position:absolute;
+    top:0; left:0;
+    width:100%; height:100%;
+    pointer-events:none;
+}
+.white-slash{
+    position:absolute;
+    background:#ffffff;
+    box-shadow: 0 0 12px #fff;
+    transform-origin: center;
+    opacity:0;
+}
+.enemyHpWrap{
+    width:260px;
+    margin:0 auto;
+    border:1px solid #666;
+    height:18px;
+    background:#111;
+}
+#enemyHpBar{
+    height:100%;
+    background:#c83838;
+    transition:width 0.25s;
+}
+#msgBox{
+    border:1px solid #555;
+    min-height:70px;
+    max-height:110px;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    padding:10px; margin:8px 0;
+    background:#0f0f16; white-space:pre-line;
+    font-size:13px; line-height:1.5;
+}
+    border:1px solid #555;
+    min-height:110px;
+    max-height:160px;
+    overflow-y:auto;
+    padding:12px;
+    margin:16px 0;
+    background:#0f0f16;
+    white-space:pre-line;
+    font-size:14px;
+    line-height:1.6;
+}
+#mokuDialog{
+    border: 1px solid #324060;
+    min-height: 72px;
+    padding: 10px 14px;
+    margin-bottom:12px;
+    background:#0c0e18;
+    display:none;
+}
+#mokuDialog .tag{
+    color:#73a8e8;
+    font-weight:bold;
+    margin-bottom:4px;
+}
+#mokuText{ color:#cbd5e6; }
+
+#actionBar, #spellBar, #itemBar{
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap:10px;
+    margin-top:12px;
+}
+#skillBar{
+    display:grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap:10px;
+    margin-top:12px;
+}
+#skillBar, #spellBar, #itemBar{ display:none; }
+
+button{
+    padding:12px;
+    border:none;
+    background:#202430;
+    color:#fff;
+    font-size:15px;
+    border-radius:6px;
+    cursor:pointer;
+}
+button:hover{ background:#2c3244; }
+button:disabled{ background:#12141a; color:#666; cursor:default; }
+
+/* ===== 霆落雷鸣特效 ===== */
+#scytheGame{
+    position:fixed; inset:0;
+    z-index:170;
+    background:rgba(2,4,10,0.95);
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:12px;
+    pointer-events:auto;
+}
+#scytheCanvas{
+    border:2px solid #6ad8ff;
+    box-shadow:0 0 24px #2a5a8a, inset 0 0 40px rgba(30,60,120,0.4);
+    background:#080c16;
+    touch-action:none;
+    border-radius:6px;
+}
+#scytheHud{
+    color:#cfe4ff; font-size:14px;
+    display:flex; gap:20px;
+    letter-spacing:1px;
+    font-family:system-ui;
+}
+#scytheLineCount{ color:#ffd266; font-size:17px; }
+#scytheHint{ color:#7fb8e8; font-size:12px; }
+
+#spaceBreakText{
+    position:fixed;
+    top:40%; left:0; right:0;
+    text-align:center;
+    font-size:44px;
+    font-weight:bold;
+    color:#6ad8ff;
+    text-shadow:0 0 20px #6ad8ff, 0 0 40px #3a6bd8, 0 0 60px #3a6bd8;
+    letter-spacing:12px;
+    z-index:180;
+    pointer-events:none;
+    display:none;
+    font-family:system-ui;
+}
+.spaceBreakAnim{
+    animation:spaceBreakFlash 1s ease-out forwards;
+}
+@ spaceBreakFlash{
+    0%{ opacity:0; transform:scale(0.5); letter-spacing:30px; }
+    20%{ opacity:1; transform:scale(1.1); letter-spacing:12px; }
+    60%{ opacity:1; transform:scale(1); }
+    100%{ opacity:0; transform:scale(1.2); }
+}
+.screenFlashBlack{
+    background:#000000;
+    animation:flashFade 0.15s ease-out forwards;
+}
+#screenFlash{
+    position:fixed; inset:0;
+    pointer-events:none;
+    z-index:169;
+    display:none;
+}
+.screenFlashWhite{
+    background:#ffffff;
+    animation:flashFade 0.15s ease-out forwards;
+}
+.screenFlashBlue{
+    background:radial-gradient(circle at 50% 50%, rgba(200,240,255,0.9), rgba(106,216,255,0.4));
+    animation:flashFade 0.2s ease-out forwards;
+}
+@ flashFade{
+    0%{ opacity:0.9; }
+    100%{ opacity:0; }
+}
+
+#comboFx{
+    position:fixed; inset:0; pointer-events:none;
+    z-index:140; display:none; overflow:hidden;
+}
+.comboLine{
+    position:absolute;
+    height:3px;
+    background:linear-gradient(90deg, transparent, #6ad8ff, #ffffff);
+    box-shadow:0 0 12px #6ad8ff, 0 0 24px #3a6bd8;
+    transform-origin:left center;
+    animation:comboLineAnim 0.4s ease-out forwards;
+}
+@ comboLineAnim{
+    0%{ opacity:0; transform:scaleX(0); }
+    30%{ opacity:1; transform:scaleX(1); }
+    70%{ opacity:1; }
+    100%{ opacity:0; }
+}
+.comboHit{
+    position:absolute;
+    width:80px; height:80px;
+    margin-left:-40px; margin-top:-40px;
+    border-radius:50%;
+    background:radial-gradient(circle, rgba(255,255,255,0.9), rgba(106,216,255,0.4), transparent 70%);
+    animation:comboHitAnim 0.5s ease-out forwards;
+}
+@ comboHitAnim{
+    0%{ opacity:0; transform:scale(0.3); }
+    30%{ opacity:1; transform:scale(1.2); }
+    100%{ opacity:0; transform:scale(1.8); }
+}
+.comboFlash{
+    position:absolute; inset:0;
+    background:radial-gradient(circle at 50% 40%, rgba(200,240,255,0.5), transparent 60%);
+    animation:comboFlashAnim 0.35s ease-out forwards;
+}
+@keyframes comboFlashAnim{
+    0%{ opacity:0; }
+    30%{ opacity:1; }
+    100%{ opacity:0; }
+}
+#thunderFx{
+    position:fixed; inset:0; pointer-events:none; z-index:150;
+    display:none; overflow:hidden;
+}
+.bolt{
+    position:absolute; top:0; width:4px;
+    background:linear-gradient(180deg,#fff,#9fe8ff,#3a6bd8);
+    box-shadow:0 0 18px #9fe8ff, 0 0 40px #3a6bd8;
+    transform-origin:top center;
+    animation:boltFlash 0.55s ease-out forwards;
+}
+@keyframes boltFlash{
+    0%{ opacity:0; transform:scaleY(0); }
+    15%{ opacity:1; transform:scaleY(1); }
+    60%{ opacity:1; }
+    100%{ opacity:0; }
+}
+.thunderVeil{
+    position:absolute; inset:0;
+    background:radial-gradient(circle at 50% 20%, rgba(180,230,255,0.35), transparent 60%);
+    animation:veilFade 0.75s ease-out forwards;
+}
+@keyframes veilFade{ 0%{opacity:0} 30%{opacity:1} 100%{opacity:0} }
+/* ===== 致幻特效 ===== */
+#hallucinationFx{
+    position:fixed; inset:0;
+    pointer-events:none;
+    z-index:168;
+    display:none;
+    overflow:hidden;
+}
+.hallucinationFog{
+    position:absolute;
+    width:80vw; height:80vw;
+    border-radius:50%;
+    background:radial-gradient(circle, rgba(160,80,220,0.45), rgba(100,40,180,0.15) 50%, transparent 75%);
+    filter:blur(40px);
+    top:10%; left:-20%;
+    animation:hallucinationDrift 8s ease-in-out infinite;
+}
+.hallucinationFog.f2{
+    width:100vw; height:100vw;
+    top:-20%; left:30%;
+    background:radial-gradient(circle, rgba(120,60,200,0.4), rgba(80,30,150,0.1) 50%, transparent 75%);
+    animation-duration:11s;
+    animation-delay:-3s;
+}
+.hallucinationFog.f3{
+    width:70vw; height:70vw;
+    top:40%; left:20%;
+    background:radial-gradient(circle, rgba(180,100,240,0.35), transparent 70%);
+    animation-duration:9s;
+    animation-delay:-6s;
+}
+@keyframes hallucinationDrift{
+    0%{ transform:translate(0,0) scale(1); opacity:0.6; }
+    25%{ transform:translate(20vw,10vh) scale(1.15); opacity:0.9; }
+    50%{ transform:translate(-10vw,20vh) scale(0.9); opacity:0.7; }
+    75%{ transform:translate(15vw,-10vh) scale(1.2); opacity:0.95; }
+    100%{ transform:translate(0,0) scale(1); opacity:0.6; }
+}
+#hallucinationFx::after{
+    content:"";
+    position:absolute; inset:0;
+    background:radial-gradient(ellipse at center, transparent 40%, rgba(80,20,120,0.55) 100%);
+    animation:hallucinationPulse 3s ease-in-out infinite;
+}
+@keyframes hallucinationPulse{
+    0%,100%{ opacity:0.5; }
+    50%{ opacity:0.95; }
+}
+/* ===== 战斗胜利弹窗 ===== */
+#victoryScreen{
+    position:fixed; inset:0;
+    z-index:200;
+    background:rgba(4,6,14,0.88);
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:18px;
+    pointer-events:none;
+}
+.victoryTitle{
+    font-size:42px;
+    font-weight:bold;
+    color:#6ad8ff;
+    letter-spacing:14px;
+    text-shadow:0 0 20px #6ad8ff, 0 0 40px #3a6bd8;
+    font-family:system-ui;
+}
+#victoryContent{
+    display:flex; flex-direction:column;
+    gap:10px; align-items:center;
+}
+.victoryRow{
+    font-size:16px;
+    color:#cbd5e6;
+    font-family:system-ui;
+    letter-spacing:2px;
+}
+.victoryNum{
+    color:#4ae8a0;
+    font-weight:bold;
+    margin-left:8px;
+}
+.victoryLoot{
+    color:#ffd266;
+    font-weight:bold;
+    margin-left:8px;
+}
+.victoryEmpty{
+    color:#5a6478;
+}
+.victoryAnim{
+    animation:victoryFadeIn 0.4s ease-out;
+}
+@keyframes victoryFadeIn{
+    0%{ opacity:0; transform:scale(0.85); }
+    100%{ opacity:1; transform:scale(1); }
+}
+</style>
+</head>
+<body style="overflow:auto; -webkit-overflow-scrolling:touch;">
+
+
+
+<div id="startScreen">
+    <h1>诺瓦涅尔缇 · 研究所</h1>
+    <p>自由探索 · 回合战斗</p>
+    <button id="startBtn">开始游戏</button>
+    <div id="updateNote">
+    <div id="updateNoteInner">版本更新：新饰品：雷羽（预告优化基础攻击特效，群体攻击，技能优化</div>
+</div>
+</div>
+
+<canvas id="c"></canvas>
+<div id="ui">Lv.<span id="levelText">1</span>｜HP：<span id="hpText">100</span> / <span id="hpMaxText">100</span>｜重生：<span id="reviveText">3</span></div>
+<div id="equipUI">饰品：无</div>
+<button id="bagToggle">背包</button>
+<div id="bagPanel">
+    <div class="ap-title">背包</div>
+    <div id="bagList"></div>
+</div>
+<div id="bagUI">背包：空</div>
+<div id="joystick"><div id="stick"></div></div>
+
+<button id="apToggle">饰品</button>
+<div id="accessoryPanel">
+    <div class="ap-title">饰品切换</div>
+    <div id="apList"></div>
+</div>
+
+<div id="thunderFx"></div>
+<div id="comboFx"></div>
+<div id="scytheGame">
+    <canvas id="scytheCanvas"></canvas>
+    <div id="scytheHud">
+        <span>划 <b id="scytheLineCount">0</b> / 3 条线</span>
+        <span id="scytheHint">在框内描绘出你的攻击痕迹</span>
+    </div>
+</div>
+<div id="spaceBreakText">空间击碎</div>
+<div id="screenFlash"></div>
+<div id="hallucinationFx">
+    <div class="hallucinationFog"></div>
+    <div class="hallucinationFog f2"></div>
+    <div class="hallucinationFog f3"></div>
+</div>
+<div id="playerStatusBar">
+<div class="statusRow">
+    <span class="statusLabel" style="color:#6ad8ff;">护盾</span>
+    <div class="barWrap"><div id="playerShieldBar" style="height:100%;background:linear-gradient(90deg,#4a8aff,#6ad8ff);width:0%;transition:width 0.25s;"></div></div>
+    <span class="statusNum" id="playerShieldNum">0/0</span>
+</div>
+    <div class="statusRow">
+        <span class="statusLabel">HP</span>
+        <div class="barWrap"><div id="playerHpBar"></div></div>
+        <span class="statusNum" id="playerHpNum">100/100</span>
+    </div>
+    <div class="statusRow">
+        <span class="statusLabel" id="mpLabel">MP</span>
+        <div class="barWrap"><div id="playerMpBar"></div></div>
+        <span class="statusNum" id="playerMpNum">100/100</span>
+    </div>
+    <div class="statusRow">
+        <span class="statusLabel">Lv.</span>
+        <span class="statusNum" id="battleLevelText" style="min-width:20px;text-align:left;">1</span>
+        <span style="font-size:10px;color:#7fb8e8;margin-left:6px;">EXP</span>
+        <div class="barWrap" style="height:6px;margin-top:2px;"><div id="playerExpBar" style="height:100%;background:#ffd266;width:0%;transition:width 0.25s;"></div></div>
+    </div>
+    <div class="statusRow" id="rageRow" style="display:none;">
+        <span class="statusLabel" style="color:#ff8060;">怒气</span>
+        <div class="barWrap"><div id="playerRageBar" style="height:100%;background:#ff8060;width:0%;transition:width 0.25s;"></div></div>
+        <span class="statusNum" id="battleRageNum">0/8</span>
+    </div>
+    <div id="playerDebuffBar" style="margin-top:4px;justify-content:flex-start;min-height:0;"></div>
+</div>
+<div id="victoryScreen">
+    <div class="victoryTitle">战 斗 胜 利</div>
+    <div id="victoryContent"></div>
+</div>
+<div id="battleUI">
+<div id="playerDebuffBar"></div>
+    <div id="enemyArea">
+        <div id="enemySprite">
+            <div class="slash-effect" id="slashContainer"></div>
+        </div>
+        <div id="enemyList"></div>
+        <div id="enemyName">畸变怪物</div>
+        <div id="debuffTag"></div>
+        <div class="enemyHpWrap">
+            <div id="enemyHpBar"></div>
+        </div>
+    </div>
+    <div id="mokuDialog">
+        <div class="tag">漠然</div>
+        <div id="mokuText"></div>
+    </div>
+    <div id="msgBox">进入战斗……</div>
+    <div id="actionBar">
+        <button onclick="battleAction('attack')">攻击</button>
+        <button onclick="battleAction('parry')">弹反</button>
+        <button onclick="battleAction('skill')">技巧</button>
+        <button onclick="battleAction('spell')">法术</button>
+        <button onclick="battleAction('item')">道具</button>
+        <button onclick="battleAction('chamber')">捕食室</button>
+        <button onclick="battleAction('escape')">逃跑</button>
+    </div>
+    <div id="skillBar">
+        <button onclick="battleAction('axeSlash')">斧镰横打（四段）</button>
+        <button id="btnScytheCut" onclick="battleAction('liberation')" style="display:none">巨镰切割</button>
+        <button onclick="closeSubMenu()">返回</button>
+    </div>
+    <div id="spellBar">
+        <button onclick="battleAction('spaceCut')">空间斩</button>
+        <button onclick="battleAction('rift')">裂空</button>
+        <button onclick="battleAction('energyGather')">能量聚集</button>
+        <button id="btnThunderFall" onclick="battleAction('thunderFall')" style="display:none">霆落雷鸣</button>
+        <button onclick="closeSubMenu()">返回</button>
+    </div>
+    <div id="itemBar">
+        <button id="btnBoxShard" onclick="battleAction('shard')" style="display:none">终焉之匣碎片</button>
+        <button onclick="closeSubMenu()">返回</button>
+    </div>
+</div>
+
+<script>
+/* =========================================================
+   基础初始化
+========================================================= */
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+const battleUI = document.getElementById("battleUI");
+const actionBar = document.getElementById("actionBar");
+const skillBar = document.getElementById("skillBar");
+const spellBar = document.getElementById("spellBar");
+const itemBar = document.getElementById("itemBar");
+const msgBox = document.getElementById("msgBox");
+const mokuDialog = document.getElementById("mokuDialog");
+const mokuText = document.getElementById("mokuText");
+const enemyHpBar = document.getElementById("enemyHpBar");
+const enemyNameDom = document.getElementById("enemyName");
+const debuffTagDom = document.getElementById("debuffTag");
+const slashContainer = document.getElementById("slashContainer");
+const startScreen = document.getElementById("startScreen");
+const startBtn = document.getElementById("startBtn");
+const equipUI = document.getElementById("equipUI");
+const bagUI = document.getElementById("bagUI");
+const btnThunderFall = document.getElementById("btnThunderFall");
+const btnBoxShard = document.getElementById("btnBoxShard");
+const hpText = document.getElementById("hpText");
+const hpMaxText = document.getElementById("hpMaxText");
+const accessoryPanel = document.getElementById("accessoryPanel");
+
+let gameStarted = false;
+let mokuBubble = {
+    text: "",
+    timer: 0,
+    maxTime: 2.8
+};
+let idleTalkTimer = 0;
+let playerStillTime = 0;
+
+const mokuIdleLines = [
+    "你走太慢了……我又没催你。",
+    "这里跟我记忆里的研究所不太一样。",
+    "……肩膀借我靠一下。就一下。",
+    "可以让我拉着你的袖口吗…",
+    "你头发有些乱了。别动。",
+    "说实话，我有点害怕…不过你在身边就行了",
+    "我要是能一直跟着你，其实也……算了。",
+    "你能不能别总是往自己身上揽。",
+    "我不是在担心你。只是……例行检查。",
+    "唔……再走一会儿就休息，好不好。",
+    "啊啊，还是忘不了在研究所的日子",
+    "要是地球真的有海……你会带我去看吗。",
+    "地形似乎一直在变",
+    "嗯……你身上的味道，和那天一样。",
+    "喂，牵一下手……不是，我是说，怕你走丢。"
+];
+let audioCtx;
+function getAudioCtx(){
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+}
+
+function resize(){canvas.width = window.innerWidth;canvas.height = window.innerHeight}
+resize();
+window.addEventListener("resize", resize);
+
+/* =========================================================
+   地图
+========================================================= */
+const TILE = 48;
+const MAP_COLS = 40;
+const MAP_ROWS = 28;
+const map = [];
+for(let r = 0; r < MAP_ROWS; r++){
+    map[r] = [];
+    for(let c = 0; c < MAP_COLS; c++){
+        if(r === 0 || r === MAP_ROWS - 1 || c === 0 || c === MAP_COLS - 1){
+            map[r][c] = 1;
+        }else{
+            map[r][c] = 0;
+        }
+    }
+}
+for(let c = 5; c <= 18; c++) map[8][c] = 1;
+for(let c = 22; c <= 35; c++) map[18][c] = 1;
+for(let r = 3; r <= 12; r++) map[r][12] = 1;
+for(let r = 15; r <= 24; r++) map[r][26] = 1;
+map[14][10] = 1;
+map[10][30] = 1;
+
+const worldW = MAP_COLS * TILE;
+const worldH = MAP_ROWS * TILE;
+
+function isWall(worldX, worldY){
+    const col = Math.floor(worldX / TILE);
+    const row = Math.floor(worldY / TILE);
+    if(col < 0 || col >= MAP_COLS || row < 0 || row >= MAP_ROWS) return true;
+    return map[row][col] === 1;
+}
+
+/* =========================================================
+   状态异常定义
+========================================================= */
+const STATUS = {
+    STUN:      "stun",
+    POISON:    "poison",
+    SUPPRESS:  "suppress",
+    CONDUCT:   "conduct",
+    THUNDER:   "thunder" ,
+    CORRODE: "corrode",
+    ILLUSION: "illusion",
+};
+const STATUS_LABEL = {
+    stun: "眩晕",
+    poison: "中毒",
+    suppress: "斯戴堤酶压制",
+    conduct: "导电",
+    thunder: "雷霆",
+    corrode: "腐蚀",
+    illusion: "致幻",
+    static: "静电",
+};
+
+/* =========================================================
+   饰品库
+========================================================= */
+const accessoryList = [
+    { name: "虚空坠饰", desc: "所有攻击伤害 +15%", dmgBonus: 0.15, defBonus: 0 },
+    { name: "稳态结晶", desc: "受到伤害减少 20%", dmgBonus: 0, defBonus: 0.20 },
+    { name: "裂隙徽记", desc: "攻击伤害 +10%，受伤减伤 10%", dmgBonus: 0.10, defBonus: 0.10 },
+    { name: "不可视之戒", desc: "看不见…战斗开局额外获得一个回合", dmgBonus: 0, defBonus: 0, special: "extraTurn" },
+    { name: "麒麟的角", desc: "解锁霆落雷鸣（群体）。雷霆 4 回合每回合 -10 血。免疫导电伤害。攻击时 30% 概率落雷 +10", dmgBonus: 0, defBonus: 0, special: "thunderSpell" },
+    { name: "无根之雨滴", desc: "晶莹的雨滴，佩戴后免疫眩晕", dmgBonus: 0, defBonus: 0, immuneStun: true },
+    { name: "落寞的星屑", desc: "黯淡的星尘，暴击率提升至 150%（受伤 +30%，MP 消耗 +50%）", dmgBonus: 0, defBonus: -0.30, critOverride: true, mpCost: 1.5 },
+    { name: "龙之逆鳞", desc: "永远不要尝试触碰龙的逆鳞。弹反叠加怒气（最高8层），每层增伤30%，攻击时结算", dmgBonus: 0, defBonus: 0, special: "dragonRage" },
+    { name: "狂暴战舞之血", desc: "战斗永无止境地继续。暴击时：40% 回 HP，40% 回 MP，20% 两者都回", dmgBonus: 0, defBonus: 0, special: "warDance" },
+    { name: "雷羽", desc: "雷鸟的羽毛，有点麻手…佩戴后自身持续拥有【静电】，敌人攻击时会被附加【导电】。静电状态下，打出的雷属性伤害增加10%。", dmgBonus: 0, defBonus: 0, special: "thunderFeather" },
+    
+];
+let equippedAccessory = null;
+let inventory = [];
+
+const predatorChamber = {
+    capacity: 12,
+    items: []
+};
+
+// 三饰品槽
+let equippedAccessories = [null, null, null];
+
+function hasAccSpecial(key){
+    return equippedAccessories.some(function(a){ return a && a.special === key; });
+}
+function hasAccFlag(key){
+    return equippedAccessories.some(function(a){ return a && a[key]; });
+}
+function getAccSum(field){
+    return equippedAccessories.reduce(function(s, a){
+        return s + (a ? (a[field] || 0) : 0);
+    }, 0);
+}
+
+function refreshAccessoryUI(){
+    var eqNames = equippedAccessories
+        .map(function(a, i){ return a ? "[" + (i+1) + "]" + a.name : "[" + (i+1) + "]空"; })
+        .join(" ");
+    equipUI.innerText = "饰品：" + eqNames;
+    equipUI.style.display = "none";
+    var invNames = inventory.length ? inventory.map(function(x){ return x.name; }).join("，") : "空";
+    var chamberNames = predatorChamber.items.length
+        ? predatorChamber.items.map(function(x){ return x.name; }).join("，")
+        : "空";
+    bagUI.innerText = "背包：" + invNames + "\n捕食室：" + chamberNames;
+    bagUI.style.whiteSpace = "pre-line";
+    bagUI.style.display = "none";
+    // 解锁法术
+    if(hasAccSpecial("thunderSpell")){
+        btnThunderFall.style.display = "block";
+    }else{
+        btnThunderFall.style.display = "none";
+    }
+
+    // 碎片
+    var hasShard = inventory.some(function(x){ return x.isItem && x.name === "终焉之匣碎片"; });
+    if(btnBoxShard){
+        btnBoxShard.style.display = hasShard ? "block" : "none";
+    }
+}
+/* =========================================================
+   漠然台词
+========================================================= */
+const mokuLines = {
+    encounter: ["检测到敌对单位，做好防备。","目标锁定，由我辅助你。","敌人出现，我来盯着。"],
+    charging: ["它正在蓄力，趁这个间隙攻击打断。","敌方蓄能中，立刻进攻。","小心，敌方现实畸变程度正在上升。"],
+    interrupted: ["蓄能终止，威胁暂时压制。","成功打断，继续进攻。"],
+    victory: ["威胁清除。","解决完毕，继续前进。","你没有受伤，很好。"],
+    hurtPlayer: ["小心，不要硬扛伤害。","注意力集中。","你的状态下降了。"],
+    chest: ["发现宝箱。","这里有一个被遗弃的补给箱。"],
+    event: ["异常信号，特殊事件触发。","空间波动，这里是一处特殊事件点。"],
+    status: ["状态异常已附着，注意应对。","它在你身上留下了印记。"]
+};
+function showMokuDialog(poolName){
+    const arr = mokuLines[poolName];
+    if(!arr) return;
+    mokuText.innerText = arr[Math.floor(Math.random() * arr.length)];
+    mokuDialog.style.display = "block";
+}
+function hideMokuDialog(){ mokuDialog.style.display = "none"; }
+
+/* =========================================================
+   摇杆（修正坐标）
+========================================================= */
+const joy = document.getElementById("joystick");
+const stick = document.getElementById("stick");
+let joyActive = false;
+let joyDx = 0, joyDy = 0;
+const joyR = 55;
+
+function setStickPos(dx, dy){
+    stick.style.left = (70 + dx * joyR - 30) + "px";
+    stick.style.top  = (70 + dy * joyR - 30) + "px";
+}
+
+joy.addEventListener("pointerdown", (e)=>{
+    if(!gameStarted || battleActive) return;
+    joyActive = true;
+    joy.setPointerCapture(e.pointerId);
+    handleJoyMove(e);
+});
+window.addEventListener("pointermove", (e)=>{
+    if(!gameStarted || !joyActive) return;
+    handleJoyMove(e);
+});
+function handleJoyMove(e){
+    const r = joy.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    const dx = e.clientX - cx;
+    const dy = e.clientY - cy;
+    const len = Math.hypot(dx, dy);
+    if(len > joyR){
+        joyDx = dx / len;
+        joyDy = dy / len;
+    }else{
+        joyDx = dx / joyR;
+        joyDy = dy / joyR;
+    }
+    setStickPos(joyDx, joyDy);
+}
+function resetJoy(){
+    joyActive = false;
+    joyDx = 0; joyDy = 0;
+    stick.style.left = "40px";
+    stick.style.top  = "40px";
+}
+window.addEventListener("pointerup", resetJoy);
+window.addEventListener("pointercancel", resetJoy);
+
+const keys = {};
+window.addEventListener("keydown", e=> keys[e.code]=true);
+window.addEventListener("keyup", e=> keys[e.code]=false);
+
+function getMoveDir(){
+    let mx = 0, my = 0;
+    if(keys["KeyW"] || keys["ArrowUp"]) my -= 1;
+    if(keys["KeyS"] || keys["ArrowDown"]) my += 1;
+    if(keys["KeyA"] || keys["ArrowLeft"]) mx -= 1;
+    if(keys["KeyD"] || keys["ArrowRight"]) mx += 1;
+    if(joyActive){ mx += joyDx; my += joyDy; }
+    const l = Math.hypot(mx, my);
+    if(l > 0) return { x: mx/l, y: my/l };
+    return { x:0, y:0 };
+}
+
+/* =========================================================
+   音效
+========================================================= */
+let walkSoundTimer = 0;
+function playWalkSound(){
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(90, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(60, ctx.currentTime + 0.07);
+    gain.gain.setValueAtTime(0.10, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.07);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(); osc.stop(ctx.currentTime + 0.07);
+}
+function playComboSound(){
+    var c = getAudioCtx();
+    var osc = c.createOscillator();
+    var gain = c.createGain();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(1800, c.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(240, c.currentTime + 0.18);
+    gain.gain.setValueAtTime(0.28, c.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.2);
+    osc.connect(gain); gain.connect(c.destination);
+    osc.start(); osc.stop(c.currentTime + 0.2);
+}
+function playHitSound(){
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(220, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.22, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(); osc.stop(ctx.currentTime + 0.08);
+}
+function playHeavyHit(){
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "square";
+    osc.frequency.setValueAtTime(140, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.14);
+    gain.gain.setValueAtTime(0.30, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.14);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(); osc.stop(ctx.currentTime + 0.14);
+}
+function playThunderSound(){
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(120, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(25, ctx.currentTime + 0.22);
+    gain.gain.setValueAtTime(0.35, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(); osc.stop(ctx.currentTime + 0.22);
+}
+
+/* =========================================================
+   相机 & 角色绘制
+========================================================= */
+const cam = { x:0, y:0 };
+function updateCamera(px, py){
+    cam.x = px - canvas.width / 2;
+    cam.y = py - canvas.height / 2;
+    cam.x = Math.max(0, Math.min(worldW - canvas.width, cam.x));
+    cam.y = Math.max(0, Math.min(worldH - canvas.height, cam.y));
+}
+
+function drawSuixing(sx, sy, flip, flash){
+    if(flash && Math.floor(performance.now() / 80) % 2 === 0) return;
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.scale(flip, 1);
+    const s = 3;
+    ctx.fillStyle = "#a6d8f5";
+    ctx.fillRect(-8*s, -12*s, 16*s, 22*s);
+    ctx.fillStyle = "#69b8dd";
+    ctx.fillRect(-7*s, -11*s, 14*s, 18*s);
+    ctx.fillStyle = "#eeeeee";
+    ctx.fillRect(-5*s, -9*s, 10*s, 8*s);
+    ctx.fillStyle = "#ffd266";
+    ctx.fillRect(-4*s, -7*s, 2*s, 2*s);
+    ctx.fillStyle = "#9888dd";
+    ctx.fillRect(2*s, -7*s, 2*s, 2*s);
+    ctx.fillStyle = "#222228";
+    ctx.fillRect(-6*s, -1*s, 12*s, 7*s);
+    ctx.fillStyle = "#333a48";
+    ctx.fillRect(-5*s, 6*s, 10*s, 5*s);
+    ctx.fillStyle = "#111114";
+    ctx.fillRect(-4*s, 11*s, 3*s, 7*s);
+    ctx.fillRect(1*s, 11*s, 3*s, 7*s);
+    ctx.restore();
+}
+function drawMokuBubble(sx, sy){
+    ctx.save();
+    ctx.font = "13px system-ui";
+    ctx.textAlign = "center";
+    var text = mokuBubble.text;
+    var textW = ctx.measureText(text).width;
+    var pad = 10;
+    var bw = textW + pad * 2;
+    var bh = 26;
+    var bx = sx - bw / 2;
+    var by = sy - 60;
+
+    var alpha = Math.min(1, mokuBubble.timer / 0.4);
+    ctx.globalAlpha = alpha;
+
+    ctx.fillStyle = "rgba(20, 30, 50, 0.92)";
+    ctx.strokeStyle = "#6ad8ff";
+    ctx.lineWidth = 1.5;
+
+    var r = 8;
+    ctx.beginPath();
+    ctx.moveTo(bx + r, by);
+    ctx.lineTo(bx + bw - r, by);
+    ctx.quadraticCurveTo(bx + bw, by, bx + bw, by + r);
+    ctx.lineTo(bx + bw, by + bh - r);
+    ctx.quadraticCurveTo(bx + bw, by + bh, bx + bw - r, by + bh);
+    ctx.lineTo(bx + r, by + bh);
+    ctx.quadraticCurveTo(bx, by + bh, bx, by + bh - r);
+    ctx.lineTo(bx, by + r);
+    ctx.quadraticCurveTo(bx, by, bx + r, by);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(sx - 6, by + bh);
+    ctx.lineTo(sx, by + bh + 8);
+    ctx.lineTo(sx + 6, by + bh);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "#cfe4ff";
+    ctx.fillText(text, sx, by + 18);
+    ctx.restore();
+}
+function drawMoku(sx, sy, flip){
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.scale(flip, 1);
+    const s = 3;
+    ctx.fillStyle = "#f4f6fa";
+    ctx.fillRect(-7*s, -11*s, 14*s, 12*s);
+    ctx.fillStyle = "#54a7cc";
+    ctx.fillRect(3*s, -4*s, 4*s, 5*s);
+    ctx.fillStyle = "#eeeeee";
+    ctx.fillRect(-5*s, -8*s, 10*s, 7*s);
+    ctx.fillStyle = "#7b58a0";
+    ctx.fillRect(-4*s, -6*s, 2*s, 2*s);
+    ctx.fillRect(2*s, -6*s, 2*s, 2*s);
+    ctx.fillStyle = "#19191f";
+    ctx.fillRect(-6*s, -1*s, 12*s, 9*s);
+    ctx.fillStyle = "#303846";
+    ctx.fillRect(-5*s, 8*s, 10*s, 4*s);
+    ctx.fillStyle = "#111114";
+    ctx.fillRect(-4*s, 12*s, 3*s, 6*s);
+    ctx.fillRect(1*s, 12*s, 3*s, 6*s);
+    ctx.restore();
+}
+function drawChest(ch){
+    if(ch.opened) return;
+    const sx = ch.x - cam.x;
+    const sy = ch.y - cam.y;
+    ctx.fillStyle = "#8b6b38";
+    ctx.fillRect(sx - 16, sy - 12, 32, 22);
+    ctx.fillStyle = "#c9a24f";
+    ctx.fillRect(sx - 16, sy - 12, 32, 5);
+    ctx.fillStyle = "#5a4520";
+    ctx.fillRect(sx - 3, sy - 4, 6, 14);
+}
+function drawEventPoint(ev){
+    if(ev.triggered) return;
+    const sx = ev.x - cam.x;
+    const sy = ev.y - cam.y;
+    const t = performance.now() / 400;
+    const pulse = 1 + Math.sin(t) * 0.2;
+    ctx.save();
+    ctx.globalAlpha= 0.85;
+    ctx.fillStyle = "#6ad8ff";
+    ctx.beginPath();
+    ctx.arc(sx, sy, 12 * pulse, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#eaffff";
+    ctx.beginPath();
+    ctx.arc(sx, sy, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+}
+function drawMapEnemy(e){
+    const sx = e.x - cam.x;
+    const sy = e.y - cam.y;
+    ctx.save();
+    ctx.translate(sx, sy);
+    const s = 3;
+    ctx.fillStyle = e.color || "#3b1818";
+    ctx.fillRect(-6*s, -10*s, 12*s, 18*s);
+    ctx.fillStyle = "#ff4444";
+    ctx.fillRect(-3*s, -7*s, 2*s, 2*s);
+    ctx.fillRect(1*s, -7*s, 2*s, 2*s);
+    ctx.restore();
+}
+
+/* =========================================================
+   玩家
+========================================================= */
+const player = {
+    x: TILE * 3,
+    y: TILE * 3,
+    spd: 270,
+    facing: 1,
+    hp: 300,
+    maxHp: 300,
+    invincible: 0,
+    moving: false,
+    statuses: {},
+    update(dt){
+        const d = getMoveDir();
+        this.moving = (d.x !== 0 || d.y !== 0);
+        if(this.moving){
+            const nx = this.x + d.x * this.spd * dt;
+            const ny = this.y + d.y * this.spd * dt;
+            if(!isWall(nx, this.y)) this.x = nx;
+            if(!isWall(this.x, ny)) this.y = ny;
+            if(d.x !== 0) this.facing = d.x > 0 ? 1 : -1;
+            walkSoundTimer += dt;
+            if(walkSoundTimer > 0.32){ walkSoundTimer = 0; playWalkSound(); }
+        }
+        if(this.invincible > 0) this.invincible -= dt;
+    },
+    draw(){
+        drawSuixing(this.x - cam.x, this.y - cam.y, this.facing, this.invincible > 0);
+    }
+}
+
+const moku = {
+    x: TILE * 4,
+    y: TILE * 3,
+    spd: 220,
+    followDist: 65,
+    facing: 1,
+    update(dt){
+        const dx = player.x - this.x;
+        const dy = player.y - this.y;
+        const dist = Math.hypot(dx, dy);
+        if(dist > this.followDist){
+            const nx = this.x + (dx/dist) * this.spd * dt;
+            const ny = this.y + (dy/dist) * this.spd * dt;
+            if(!isWall(nx, this.y)) this.x = nx;
+            if(!isWall(this.x, ny)) this.y = ny;
+            if(dx !== 0) this.facing = dx > 0 ? 1 : -1;
+        }
+    },
+    draw(){ drawMoku(this.x - cam.x, this.y - cam.y, this.facing); }
+}
+
+/* =========================================================
+   敌人模板
+========================================================= */
+const ENEMY_TYPES = [
+    {
+        name: "天堂 刃部队 突击兵",
+        faction: "天堂", // <-- 新增
+        hp: 110,
+        color: "#3b1818",
+        moves: [
+            { name: "突刺", type: "phys", dmg: 14 },
+            { name: "致眩击", type: "phys", dmg: 9, status: STATUS.STUN, turns: 1, chance: 0.35 }
+        ]
+    },
+    {
+        name: "天堂 刃部队 重装突击兵",
+        faction: "天堂", // <-- 新增
+        hp: 180,
+        color: "#4a2010",
+        moves: [
+            { name: "重锤", type: "phys", dmg: 20 },
+            { name: "酶蚀弹", type: "phys", dmg: 10, status: STATUS.SUPPRESS, turns: 2, value: 0.3, chance: 0.5 }
+        ]
+    },
+    {
+        name: "天堂 刃部队 先锋",
+        faction: "天堂", // <-- 新增
+        hp: 130,
+        color: "#2a1828",
+        moves: [
+            { name: "连斩", type: "phys", dmg: 12, hits: 2 },
+            { name: "毒刃", type: "phys", dmg: 8, status: STATUS.POISON, turns: 3, value: 6, chance: 0.6 }
+        ]
+    },
+    {
+        name: "电虫 · 电浆种",
+        faction: "何类生物（电虫）", // <-- 新增
+        hp: 150,
+        color: "#102a3a",
+        moves: [
+            { name: "电弧", type: "elec", dmg: 15 },
+            { name: "导电缠绕", type: "elec", dmg: 6, status: STATUS.CONDUCT, turns: 3, value: 5, chance: 0.7 }
+        ]
+    },
+    {
+        name: "电虫 · 巢母",
+        faction: "何类生物（电虫）", // <-- 新增
+        hp: 240,
+        color: "#2a1020",
+        moves: [
+            { name: "撕裂", type: "phys", dmg: 22 },
+            { name: "孢子毒雾", type: "phys", dmg: 5, status: STATUS.POISON, turns: 4, value: 8, chance: 0.8 },
+            { name: "压制", type: "phys", dmg: 8, status: STATUS.SUPPRESS, turns: 3, value: 0.35, chance: 0.6 }
+        ]
+    },
+    {
+        name: "电虫 · 巢守卫",
+        faction: "何类生物（电虫）", // <-- 新增
+        hp: 200,
+        color: "#1a2030",
+        moves: [
+            { name: "雷击", type: "elec", dmg: 18 },
+            { name: "感电爆发", type: "elec", dmg: 4, status: STATUS.CONDUCT, turns: 4, value: 6, chance: 0.85 }
+        ]
+    },
+    {
+        name: "奔狼",
+        faction: "何类生物（奔狼）", // <-- 新增
+        hp: 150,
+        color: "#2a1a10",
+        moves: [
+            { name: "消化液雾释放", type: "phys", dmg: 10, status: STATUS.CORRODE, turns: 3, value: 5, chance: 1, noParry: true },
+            { name: "撕咬", type: "phys", dmg: 15 },
+        ]
+    }
+];
+
+/* =========================================================
+   地图敌人 / 宝箱 / 事件点
+========================================================= */
+let mapEnemies = [];
+function spawnPatrolEnemy(){
+    for(let attempt = 0; attempt < 80; attempt++){
+        const c = 2 + Math.floor(Math.random() * (MAP_COLS - 4));
+        const r = 2 + Math.floor(Math.random() * (MAP_ROWS - 4));
+        const ex = c * TILE + TILE/2;
+        const ey = r * TILE + TILE/2;
+        if(isWall(ex, ey)) continue;
+        if(Math.hypot(ex - player.x, ey - player.y) < TILE * 4) continue;
+
+        // 【新增】40% 概率生成一群敌人（2-3个）
+        var groupCount = Math.random() < 0.4 ? (Math.random() < 0.5 ? 2 : 3) : 1;
+        var group = [];
+        for (var g = 0; g < groupCount; g++) {
+            var offsetX = (Math.random() - 0.5) * TILE * 3.5;
+            var offsetY = (Math.random() - 0.5) * TILE * 3.5;
+            var finalEx = ex + offsetX;
+            var finalEy = ey + offsetY;
+            
+            if (isWall(finalEx, finalEy)) continue;
+            if (Math.hypot(finalEx - player.x, finalEy - player.y) < TILE * 4) continue;
+
+            const tpl = ENEMY_TYPES[Math.floor(Math.random() * ENEMY_TYPES.length)];
+            group.push({
+                x: finalEx, y: finalEy,
+                faction: tpl.faction,
+                hp: tpl.hp, maxHp: tpl.hp,
+                name: tpl.name, color: tpl.color, moves: tpl.moves,
+                patrol: {
+                    dx: Math.random() > 0.5 ? 1 : -1,
+                    dy: Math.random() > 0.5 ? 1 : -1,
+                    spd: 60,
+                    timer: 0
+                }
+            });
+        }
+        if (group.length > 0) {
+            mapEnemies.push(...group);
+            return true;
+        }
+    }
+    return false;
+}
+for(let i = 0; i < 10; i++) spawnPatrolEnemy();
+
+function updateMapEnemies(dt){
+    for(const e of mapEnemies){
+        e.patrol.timer -= dt;
+        if(e.patrol.timer <= 0){
+            e.patrol.timer = 1 + Math.random() * 1.5;
+            e.patrol.dx = (Math.random() > 0.5 ? 1 : -1);
+            e.patrol.dy = (Math.random() > 0.5 ? 1 : -1);
+        }
+        const nx = e.x + e.patrol.dx * e.patrol.spd * dt;
+        const ny = e.y + e.patrol.dy * e.patrol.spd * dt;
+        if(!isWall(nx, e.y)) e.x = nx; else e.patrol.dx *= -1;
+        if(!isWall(e.x, ny)) e.y = ny; else e.patrol.dy *= -1;
+    }
+}
+
+let chestList = [];
+function spawnChest(){
+    for(let attempt = 0; attempt < 120; attempt++){
+        const c = 2 + Math.floor(Math.random() * (MAP_COLS - 4));
+        const r = 2 + Math.floor(Math.random() * (MAP_ROWS - 4));
+        const cx = c * TILE + TILE/2;
+        const cy = r * TILE + TILE/2;
+        if(isWall(cx, cy)) continue;
+        let ok = true;
+        for(const ch of chestList){
+            if(Math.hypot(ch.x - cx, ch.y - cy) < TILE * 2){ ok = false; break; }
+        }
+        if(ok){ chestList.push({ x: cx, y: cy, opened: false }); return true; }
+    }
+    return false;
+}
+for(let i = 0; i < 8; i++) spawnChest();
+let ambushWolves = [];
+function spawnAmbushWolf(){
+    for(var attempt = 0; attempt < 80; attempt++){
+        var c = 2 + Math.floor(Math.random() * (MAP_COLS - 4));
+        var r = 2 + Math.floor(Math.random() * (MAP_ROWS - 4));
+        var wx = c * TILE + TILE/2;
+        var wy = r * TILE + TILE/2;
+        if(isWall(wx, wy)) continue;
+        if(Math.hypot(wx - player.x, wy - player.y) < TILE * 5) continue;
+        ambushWolves.push({ x: wx, y: wy, triggered: false });
+        return true;
+    }
+    return false;
+}
+for(var wi = 0; wi < 4; wi++) spawnAmbushWolf();
+let eventList = [];
+function spawnEventPoint(){
+    for(let attempt = 0; attempt < 120; attempt++){
+        const c = 2 + Math.floor(Math.random() * (MAP_COLS - 4));
+        const r = 2 + Math.floor(Math.random() * (MAP_ROWS - 4));
+        const ex = c * TILE + TILE/2;
+        const ey = r * TILE + TILE/2;
+        if(isWall(ex, ey)) continue;
+        let ok = true;
+        for(const ev of eventList){
+            if(Math.hypot(ev.x - ex, ev.y - ey) < TILE * 2){ ok = false; break; }
+        }
+        if(ok){ eventList.push({ x: ex, y: ey, triggered: false }); return true; }
+    }
+    return false;
+}
+for(let i = 0; i < 5; i++) spawnEventPoint();
+let refreshTimer = 30;
+const REFRESH_INTERVAL = 30;
+
+function refreshMapContent(){
+// 清理已开宝箱 / 已触发事件
+chestList = chestList.filter(function(c){ return !c.opened; });
+eventList = eventList.filter(function(e){ return !e.triggered; });
+    // 补敌人到 10 个
+    while(mapEnemies.length < 10){
+        if(!spawnPatrolEnemy()) break;
+    }
+    // 补宝箱到 8 个（只数没开的）
+    var closedChests = chestList.filter(function(c){ return !c.opened; }).length;
+    while(closedChests < 8){
+        if(!spawnChest()) break;
+        closedChests++;
+    }
+    // 补事件点到 5 个
+    var unTriggered = eventList.filter(function(e){ return !e.triggered; }).length;
+    while(unTriggered < 5){
+        if(!spawnEventPoint()) break;
+        unTriggered++;
+    }
+    showPickupToast("研究所重构——地形刷新");
+}
+/* =========================================================
+   地图交互
+========================================================= */
+function checkMapCollisions(){
+// 奔狼埋伏
+for(var wi = 0; wi < ambushWolves.length; wi++){
+    var w = ambushWolves[wi];
+    if(w.triggered) continue;
+    if(Math.hypot(w.x - player.x, w.y - player.y) < TILE * 2){
+        w.triggered = true;
+        showPickupToast("地面震动……什么东西钻出来了！");
+        var wolfMove = ENEMY_TYPES[ENEMY_TYPES.length - 1].moves;
+        var fake = {
+    x: w.x, y: w.y,
+    faction: "野生", // 【加在这里】
+    hp: 150, maxHp: 150,
+    name: "奔狼", color: "#2a1a10", moves: wolfMove
+    };
+        ambushWolves.splice(wi, 1);
+    var fake2 = {
+    x: w.x, y: w.y,
+    faction: "野生", // 【加在这里】
+    hp: 150, maxHp: 150,
+    name: "奔狼", color: "#2a1a10", moves: wolfMove
+};
+setTimeout(function(){ startBattle([fake]); }, 500);
+        return;
+    }
+}
+// 敌人
+for(const e of mapEnemies){
+    if(Math.hypot(e.x - player.x, e.y - player.y) < TILE * 0.7){
+        // 【多方混战】收集附近敌人，最多 3 个（不限制阵营和名字）
+        var group = [e];
+        for(const other of mapEnemies){
+            if(other === e) continue;
+            if(group.length >= 3) break;
+            // 扩大拉扯范围至 2.5 格，允许不同阵营、不同名字的敌人加入
+            if(Math.hypot(other.x - e.x, other.y - e.y) < TILE * 5.0){ 
+                group.push(other);
+            }
+        }
+        startBattle(group);
+        return;
+    }
+}
+    // 宝箱
+    for(const ch of chestList){
+        if(!ch.opened && Math.hypot(ch.x - player.x, ch.y - player.y) < TILE * 0.6){
+            openChest(ch);
+        }
+    }
+    // 事件点
+    for(const ev of eventList){
+        if(!ev.triggered && Math.hypot(ev.x - player.x, ev.y - player.y) < TILE * 0.6){
+            triggerEvent(ev);
+        }
+    }
+}
+
+function openChest(ch){
+    ch.opened = true;
+    const roll = Math.random();
+    if(roll < 0.55){
+        const acc = accessoryList[Math.floor(Math.random() * accessoryList.length)];
+        inventory.push(acc);
+        showPickupToast(`获得饰品【${acc.name}】`);
+    }else if(roll < 0.8){
+        inventory.push({ name: "终焉之匣碎片", isItem: true });
+        showPickupToast("获得【终焉之匣碎片】");
+    }else{
+        player.hp = Math.min(player.maxHp, player.hp + 30);
+        showPickupToast("回复了 30 HP");
+    }
+    showMokuDialog("chest");
+    refreshAccessoryUI();
+}
+
+function triggerEvent(ev){
+    ev.triggered = true;
+    const roll = Math.random();
+    if(roll < 0.4){
+        var before = player.hp;
+        player.hp = Math.min(player.maxHp, player.hp * 1.5);
+        var gain = Math.floor(player.hp - before);
+        showPickupToast("异常治愈波：恢复 " + gain + " HP");
+    }else if(roll < 0.7){
+        showPickupToast("空间扭曲：一场强化战斗即将到来");
+        setTimeout(()=>{
+            const tpl = ENEMY_TYPES[ENEMY_TYPES.length - 1];
+            const fake = {
+                x: player.x, y: player.y,
+                hp: Math.floor(tpl.hp * 2.5), maxHp: Math.floor(tpl.hp * 2.5),
+                name: tpl.name + " · 强化", color: tpl.color, moves: tpl.moves
+            };
+            startBattle(fake);
+        }, 800);
+    }else{
+        const acc = accessoryList[Math.floor(Math.random() * accessoryList.length)];
+        inventory.push(acc);
+        showPickupToast(`拾得【${acc.name}】`);
+    }
+    showMokuDialog("event");
+    refreshAccessoryUI();
+}
+
+let toastTimer = 0;
+let toastText = "";
+function showPickupToast(text){
+    toastText = text;
+    toastTimer = 2.2;
+}
+
+/* =========================================================
+   战斗系统
+========================================================= */
+let battleActive = false;
+let currentEnemies = [];
+let selectedEnemyIndex = 0;
+Object.defineProperty(window, "currentEnemy", {
+    get: function(){
+        return currentEnemies[selectedEnemyIndex] || null;
+    },
+    configurable: true
+});
+let playerExtraTurn = false;
+let reviveCount = 3;
+const MAX_REVIVE = 3;
+let parryActive = false;
+player.mp = 200;
+player.maxMp = 200;
+player.rage = 0;
+player.shield = 0;
+player.maxShield = 0;
+
+function getMaxShield(){
+    return Math.floor(player.maxHp * 0.5 + (player.level - 1) * 20);
+}
+// 升级系统
+player.level = 1;
+player.exp = 0;
+player.expNext = 100;
+player.dmgMul = 1;      // 每级 +5% 伤害
+// 解放状态
+let energyChargeTurns = 0;
+let liberationReady = false;
+let liberationEnergy = 0;
+
+const MP_COST = {
+    spaceCut: 15,
+    rift: 25,
+    thunderFall: 40
+};
+function gainExp(amount){
+    player.exp += amount;
+    while(player.exp >= player.expNext){
+        player.exp -= player.expNext;
+        player.level++;
+        player.expNext = 100 * player.level;
+        player.maxHp += 15;
+        player.maxMp += 10;
+        player.hp += 15;
+        player.mp += 10;
+        player.dmgMul += 0.05;
+        player.maxShield = getMaxShield();
+player.shield = player.maxShield;
+        msgBox.innerText += "\n【升级】等级 " + player.level + "！HP+15 MP+10 伤害+5%";
+        if(typeof playHealSound === "function") playHealSound();
+    }
+    updateBattleUI();
+    refreshLevelUI();
+}
+
+function refreshLevelUI(){
+    var el = document.getElementById("levelText");
+    if(el) el.innerText = player.level;
+}
+// 兼容层：老代码用 currentEnemy，新代码用 currentEnemies
+if(typeof currentEnemies === "undefined"){ window.currentEnemies = []; }
+if(typeof selectedEnemyIndex === "undefined"){ window.selectedEnemyIndex = 0; }
+function startBattle(enemyData){
+    // 支持单个敌人或数组
+    var enemyArray = Array.isArray(enemyData) ? enemyData : [enemyData];
+    
+    battleActive = true;
+    currentEnemies = enemyArray.map(function(ed){
+    return {
+        name: ed.name,
+        faction: ed.faction || "未知", // <-- 新增，把阵营带进战斗
+        hp: ed.hp,
+        maxHp: ed.maxHp,
+        color: ed.color || "#3b1818",
+        moves: ed.moves,
+        statuses: {}
+    };
+});
+    selectedEnemyIndex = 0;
+
+    // 从地图移除
+    mapEnemies = mapEnemies.filter(function(e){
+        return enemyArray.indexOf(e) === -1;
+    });
+
+    battleUI.style.display = "block";
+    enemyNameDom.innerText = currentEnemy.name;
+    msgBox.innerText = `遭遇【${currentEnemy.name}】！`;
+    hideMokuDialog();
+    showMokuDialog("encounter");
+    setTimeout(scrollMsgToBottom, 100);
+
+    player.statuses = {};
+    // 【雷羽】静电伴随
+if (hasAccSpecial("thunderFeather")) {
+    player.statuses["static"] = { turns: 999, value: 0 };
+    msgBox.innerText += "\n【雷羽】静电环绕在你的周围。";
+}
+    player.hallucinate = false;
+    player.hallucinateTurns = 0;
+    player.rage = 0;
+    player.maxShield = getMaxShield();
+player.shield = player.maxShield;
+    parryActive = false;
+    mokuComboReady = true;
+
+    playerExtraTurn = hasAccSpecial("extraTurn");
+    if(playerExtraTurn){
+        msgBox.innerText += "\n【不可视之戒】你抢得先机，获得额外回合！";
+    }
+
+    updateBattleUI();
+    updateEnemyHpBar();
+    scrollMsgToBottom();
+    updateDebuffTag();
+    closeSubMenu();
+    enableActionButtons(true);
+    enableActionButtons(true);
+}
+function scrollMsgToBottom(){
+    if(msgBox){
+        msgBox.scrollTop = msgBox.scrollHeight;
+    }
+}
+function updateEnemyHpBar(){
+    if(currentEnemy){
+        var pct;
+        if(player.hallucinate){
+            var real = currentEnemy.hp / currentEnemy.maxHp;
+            var fake = real + (Math.random() - 0.5) * 0.5;
+            fake = Math.max(0.05, Math.min(1, fake));
+            pct = fake * 100;
+            enemyHpBar.style.background = "#8a4ac8";
+        }else{
+            pct = Math.max(0, currentEnemy.hp / currentEnemy.maxHp) * 100;
+            enemyHpBar.style.background = "#c83838";
+        }
+        enemyHpBar.style.width = pct + "%";
+        enemyNameDom.innerText = currentEnemy.name;
+    }
+    renderEnemyList();
+}
+
+function renderEnemyList(){
+    var list = document.getElementById("enemyList");
+    if(!list) return;
+    list.innerHTML = "";
+    if(currentEnemies.length <= 1){
+        list.style.display = "none";
+        return;
+    }
+    list.style.display = "flex";
+    currentEnemies.forEach(function(en, i){
+        var div = document.createElement("div");
+        div.className = "enemy-list-item" + (i === selectedEnemyIndex ? " selected" : "");
+        var hpText = Math.max(0, Math.floor(en.hp)) + "/" + en.maxHp;
+        div.innerHTML =
+            '<span class="elname">' + en.name + '</span>' +
+            '<span class="elhp">' + hpText + '</span>';
+        div.onclick = function(){
+            selectedEnemyIndex = i;
+            updateEnemyHpBar();
+            updateDebuffTag();
+        };
+        list.appendChild(div);
+    });
+}
+
+function updateDebuffTag(){
+    if(!currentEnemy) return;
+    const arr = [];
+    for(const k in currentEnemy.statuses){
+        const st = currentEnemy.statuses[k];
+        arr.push(`${STATUS_LABEL[k]}(${st.turns})`);
+    }
+    debuffTagDom.innerText = arr.length ? "敌方状态：" + arr.join(" / ") : "";
+}
+function updatePlayerDebuffBar(){
+    var bar = document.getElementById("playerDebuffBar");
+    if(!bar) return;
+    bar.innerHTML = "";
+    if(!battleActive || !player.statuses) return;
+    
+    var count = 0;
+    for(var k in player.statuses){
+        var st = player.statuses[k];
+        var chip = document.createElement("div");
+        chip.className = "debuff-chip " + k;
+        // 【修复】静电只显示名字，不显示回合数
+if (k === "static") {
+    chip.innerText = STATUS_LABEL[k];
+} else {
+    chip.innerText = STATUS_LABEL[k] + " " + st.turns;
+}
+        bar.appendChild(chip);
+        count++;
+    }
+    if(count === 0){
+        bar.style.display = "none";
+    }else{
+        bar.style.display = "flex";
+    }
+}
+updatePlayerDebuffBar();
+function updateBattleUI(){
+    var sBar = document.getElementById("playerShieldBar");
+var sNum = document.getElementById("playerShieldNum");
+if(sBar && sNum){
+    player.maxShield = getMaxShield();
+    var sPct = Math.max(0, player.shield / Math.max(1, player.maxShield)) * 100;
+    sBar.style.width = sPct + "%";
+    sNum.innerText = Math.floor(player.shield) + "/" + player.maxShield;
+}
+    hpText.innerText = Math.floor(player.hp);
+    hpMaxText.innerText = player.maxHp;
+    document.getElementById("ui").style.display = battleActive ? "none" : "block";
+
+    var bar = document.getElementById("playerStatusBar");
+    if(bar) bar.style.display = battleActive ? "flex" : "none";
+
+    // HP
+    var hpBar = document.getElementById("playerHpBar");
+    var hpNum = document.getElementById("playerHpNum");
+    if(hpBar && hpNum){
+        var hpPct = Math.max(0, player.hp / player.maxHp) * 100;
+        hpBar.style.width = hpPct + "%";
+        if(hpPct < 30) hpBar.style.background = "#c83838";
+        else if(hpPct < 60) hpBar.style.background = "#e8a828";
+        else hpBar.style.background = "#4ae8a0";
+        hpNum.innerText = Math.floor(player.hp) + "/" + player.maxHp;
+    }
+
+    // MP
+    var mpBar = document.getElementById("playerMpBar");
+    var mpNum = document.getElementById("playerMpNum");
+    var mpLabel = document.getElementById("mpLabel");
+    if(mpBar && mpNum){
+        var mpPct = Math.max(0, player.mp / player.maxMp) * 100;
+        mpBar.style.width = mpPct + "%";
+        mpNum.innerText = Math.floor(player.mp) + "/" + player.maxMp;
+    }
+
+    // 等级 & 经验
+    var lvlEl = document.getElementById("battleLevelText");
+    if(lvlEl) lvlEl.innerText = player.level;
+    var expBar = document.getElementById("playerExpBar");
+    if(expBar){
+        var expPct = (player.exp / player.expNext) * 100;
+        expBar.style.width = Math.min(100, expPct) + "%";
+    }
+
+    // 怒气（龙之逆鳞）
+    var rageRow = document.getElementById("rageRow");
+    var rageBar = document.getElementById("playerRageBar");
+    var rageNum = document.getElementById("battleRageNum");
+    if(rageRow && rageBar && rageNum){
+        if(hasAccSpecial("dragonRage")){
+            rageRow.style.display = "flex";
+            rageBar.style.width = (player.rage / 8 * 100) + "%";
+            rageNum.innerText = player.rage + "/8";
+        }else{
+            rageRow.style.display = "none";
+        }
+    }
+
+    // 实时 debuff
+    updatePlayerDebuffBar();
+}
+function enableActionButtons(on){
+    document.querySelectorAll("#actionBar button, #skillBar button, #spellBar button, #itemBar button")
+        .forEach(b => b.disabled = !on);
+}
+
+function closeSubMenu(){
+    skillBar.style.display = "none";
+    spellBar.style.display = "none";
+    itemBar.style.display = "none";
+    actionBar.style.display = "grid";
+}
+
+function openSubMenu(which){
+    actionBar.style.display = "none";
+    skillBar.style.display = "none";
+    spellBar.style.display = "none";
+    itemBar.style.display = "none";
+    if(which === "skill") skillBar.style.display = "grid";
+    if(which === "spell") spellBar.style.display = "grid";
+    if(which === "item") itemBar.style.display = "grid";
+}
+
+/* ---------- 暴击 & 伤害计算 ---------- */
+
+function getCritRate(){
+    if(hasAccFlag("critOverride")) return 1.5;
+    return 0.20 + getAccSum("critBonus");
+}
+
+function rollDamage(baseDmg){
+    var rate = getCritRate();
+    var critChance = Math.min(rate, 1);
+    var overflow = Math.max(0, rate - 1);
+    var isCrit = Math.random() < critChance;
+    var dmg = baseDmg;
+    if(isCrit) dmg *= (1.5 + overflow);
+    dmg *= (1 + getAccSum("dmgBonus"));
+dmg *= player.dmgMul;
+if(isCrit) warDanceHeal();
+    return { dmg: Math.max(1, Math.floor(dmg)), isCrit: isCrit };
+}
+
+function calcPlayerDamage(base, isSpell, isThunder){
+    let dmg = base;
+    // 保留原有的压制减伤逻辑
+    if(isSpell && player.statuses[STATUS.SUPPRESS]){
+        dmg *= (1 - player.statuses[STATUS.SUPPRESS].value);
+    }
+    // 【雷羽】雷属性伤害增加10%
+    if(isThunder && hasAccSpecial("thunderFeather")){
+        dmg *= 1.1;
+    }
+    return rollDamage(dmg);
+}
+function calcEnemyDefenseMul(){
+    var bonus = getAccSum("defBonus");
+    if(typeof mokuForm !== "undefined" && mokuForm === "core") bonus += 0.10;
+    return Math.max(0.2, 1 - bonus);
+}
+
+/* ---------- 状态处理 ---------- */
+function applyStatus(target, type, turns, value = 0){
+    if(target === player && type === STATUS.STUN
+       && hasAccFlag("immuneStun")){
+        msgBox.innerText += "\n【无根之雨滴】抵消了眩晕。";
+        return false;
+    }
+    target.statuses[type] = { turns, value };
+    return true;
+}
+function tickStatuses(target){
+    let skipTurn = false;
+    for(const type in target.statuses){
+    // 【雷羽】静电状态跳过结算，不被消耗
+if(type === "static") continue;
+        const st = target.statuses[type];
+        
+        // 1. 中毒
+        if(type === STATUS.POISON){
+            target.hp = Math.max(0, target.hp - st.value);
+            msgBox.innerText += `\n中毒：损失 ${st.value} HP。`;
+        }
+        
+        // 2. 导电
+        if(type === STATUS.CONDUCT){
+            if(target === player && hasAccSpecial("thunderSpell")){
+                // 麒麟的角：免疫导电伤害
+            }else{
+                target.hp = Math.max(0, target.hp - st.value);
+                msgBox.innerText += `\n导电灼伤：电流灼烧 ${st.value} HP。`;
+            }
+        }
+        
+        // 3. 雷霆（电虫特性正确放置的位置）
+        if(type === STATUS.THUNDER){
+            var thunderDmg = st.value;
+            // 【电虫特性】雷属性抗性
+            if(target.faction && target.faction.indexOf("何类生物（电虫）") !== -1){
+                thunderDmg = Math.floor(thunderDmg * 0.5);
+                msgBox.innerText += `\n【电虫抗性】雷霆效果减半。`;
+            }
+            target.hp = Math.max(0, target.hp - thunderDmg);
+            msgBox.innerText += `\n雷霆：损失 ${thunderDmg} HP。`;
+        }
+        
+        // 4. 腐蚀
+        if(type === STATUS.CORRODE){
+            target.hp = Math.max(0, target.hp - 5);
+            msgBox.innerText += `\n腐蚀：损失 5 HP。`;
+        }
+        
+        // 5. 眩晕
+        if(type === STATUS.STUN && st.turns > 0) {
+            skipTurn = true;
+            msgBox.innerText += `\n【眩晕】${target.name || "你"} 头晕目眩，无法行动！`;
+        }
+        
+        st.turns--;
+        if(st.turns <= 0) delete target.statuses[type];
+    }
+    return skipTurn;
+}
+
+/* ---------- 玩家动作 ---------- */
+var actionLock = false; 
+
+function battleAction(action){
+    if(actionLock) return; 
+    if(!battleActive || !currentEnemy) return;
+
+    if(action === "skill"){ openSubMenu("skill"); return; }
+    if(action === "spell"){ openSubMenu("spell"); return; }
+    if(action === "item"){ openSubMenu("item"); return; }
+
+    if(action === "escape"){
+        if(Math.random() < 0.45){
+            msgBox.innerText += "\n逃跑成功。";
+            setTimeout(endBattle, 500);
+        }else{
+            msgBox.innerText += "\n逃跑失败！";
+            setTimeout(enemyTurn, 500);
+        }
+        return;
+    }
+
+    actionLock = true;
+    setTimeout(function(){ actionLock = false; }, 500); 
+    enableActionButtons(false);
+
+    // 【2.5秒看门狗】只要还在战斗中，2.5秒后无条件恢复按键
+    setTimeout(function(){
+        if (battleActive) enableActionButtons(true);
+    }, 2500);
+
+    try {
+        if(action === "spaceCut" || action === "rift" || action === "thunderFall"){
+            var cost = MP_COST[action] || 0;
+            if(player.mp < cost){
+                msgBox.innerText += "\nMP 不足（需要 " + cost + "）。";
+                scrollMsgToBottom();
+                enableActionButtons(true);
+                actionLock = false;
+                return;
+            }
+        }
+        if(liberationReady && action !== "escape" && action !== "energyGather"){
+            var cost = (action === "liberation") ? 50 : 10;
+            liberationEnergy = Math.max(0, liberationEnergy - cost);
+            if(liberationEnergy <= 0) exitLiberation();
+        }
+        
+        switch(action){
+            case "attack": doAttack(); break;
+            case "parry":  doParry(); break;
+            case "axeSlash": doAxeSlash(); break;
+            case "spaceCut": player.mp = Math.max(0, player.mp - MP_COST.spaceCut); doSpaceCut(); break;
+            case "rift": player.mp = Math.max(0, player.mp - MP_COST.rift); doRift(); break;
+            case "thunderFall": player.mp = Math.max(0, player.mp - MP_COST.thunderFall); doThunderFall(); break;
+            case "shard": doShard(); break;
+            case "chamber": doChamber(); break;
+            case "energyGather": doEnergyGather(); break;
+            case "liberation": doLiberation(); break;
+        }
+    } catch(e) {
+        console.error("玩家行动崩溃，已强制跳过:", e);
+        enableActionButtons(true); 
+        actionLock = false;
+    }
+} // ← 结束括号，只能有一个！
+function tryThunderProc(target){
+    if(!hasAccSpecial("thunderSpell")) return;
+    if(!target || target.hp <= 0) return;
+    if(Math.random() < 0.30){
+        var extra = 10;
+        // 【雷羽】如果是雷属性被动，也享受10%加成
+        if(hasAccSpecial("thunderFeather")){
+            extra = Math.floor(extra * 1.1);
+        }
+        target.hp = Math.max(0, target.hp - extra);
+        msgBox.innerText += `\n【麒麟的角 · 落雷】额外造成 ${extra} 雷伤。`;
+        playThunderSound();
+        updateEnemyHpBar();
+    }
+}
+
+function doAttack(){
+    closeSubMenu();
+    const { dmg, isCrit } = calcPlayerDamage(14);
+    currentEnemy.hp = Math.max(0, currentEnemy.hp - dmg);
+    msgBox.innerText += `\n你发动攻击${isCrit ? "（暴击！）" : ""}，造成 ${dmg} 伤害。`;
+    playHitSound();
+    spawnSlash("white-slash", 120, 8, 0);
+    updateEnemyHpBar();
+    tryThunderProc(currentEnemy);
+    if(isCrit) tryMokuCombo();
+   scrollMsgToBottom();
+   setTimeout(afterPlayerAction, 550);
+}
+
+function doParry(){
+    closeSubMenu();
+    parryActive = true;
+    msgBox.innerText += "\n你摆出弹反姿态。";
+
+    // 10% 概率弹反失败
+    if(Math.random() < 0.1){
+        parryActive = false;
+        msgBox.innerText += "\n【弹反失败】姿态被打乱！";
+        if(typeof playHeavyHit === "function") playHeavyHit();
+        scrollMsgToBottom();
+        setTimeout(afterPlayerAction, 350);
+        return;
+    }
+
+    // 龙之逆鳞：弹反叠怒气
+    if(hasAccSpecial("dragonRage")){
+        if(player.rage < 8){
+            player.rage++;
+            msgBox.innerText += "\n【龙之逆鳞】怒气 " + player.rage + "/8";
+            if(typeof playHealSound === "function") playHealSound();
+        }else{
+            msgBox.innerText += "\n【龙之逆鳞】怒气已满！";
+        }
+        updateBattleUI();
+    }
+    scrollMsgToBottom();
+    setTimeout(afterPlayerAction, 350);
+}
+
+function doAxeSlash(){
+    closeSubMenu();
+    let total = 0;
+    let hits = 0;
+    for(let i = 0; i < 4; i++){
+        setTimeout(()=>{
+            const { dmg, isCrit } = calcPlayerDamage(7);
+            total += dmg;
+            if(isCrit) hits++;
+            currentEnemy.hp = Math.max(0, currentEnemy.hp - dmg);
+            updateEnemyHpBar();
+            scrollMsgToBottom();
+            playHitSound();
+            spawnSlash("white-slash", 60 + Math.random()*70, 6, i * 90);
+        }, i * 120);
+    }
+    setTimeout(()=>{
+    tryThunderProc(currentEnemy);
+        msgBox.innerText += `\n斧镰横打四段，共造成 ${total} 伤害${hits ? `（暴击${hits}次）` : ""}。`;
+        setTimeout(afterPlayerAction, 350);
+    }, 550);
+}
+
+function doSpaceCut(){
+    closeSubMenu();
+    const { dmg, isCrit } = calcPlayerDamage(28, true);
+    currentEnemy.hp = Math.max(0, currentEnemy.hp - dmg);
+    msgBox.innerText += `\n空间斩${isCrit ? "（暴击！）" : ""}，造成 ${dmg} 伤害。`;
+    playHeavyHit();
+    spawnSlash("white-slash", 160, 12, 0);
+    tryThunderProc(currentEnemy);
+    updateEnemyHpBar();
+    scrollMsgToBottom();
+    setTimeout(afterPlayerAction, 650);
+}
+
+function doRift(){
+    closeSubMenu();
+    const { dmg, isCrit } = calcPlayerDamage(42, true);
+    currentEnemy.hp = Math.max(0, currentEnemy.hp - dmg);
+    msgBox.innerText += `\n裂空${isCrit ? "（暴击！）" : ""}，造成 ${dmg} 伤害。`;
+    playHeavyHit();
+    spawnSlash("white-slash", 200, 16, 0);
+    tryThunderProc(currentEnemy);
+    updateEnemyHpBar();
+    scrollMsgToBottom();
+    setTimeout(afterPlayerAction, 700);
+}
+
+function doThunderFall(){
+    closeSubMenu();
+    playThunderFx();
+    screenShake(8, 400);
+
+    setTimeout(()=>{
+        var totalDmg = 0;
+        var hitCount = 0;
+        var critAny = false;
+        for(var ti = 0; ti < currentEnemies.length; ti++){
+            var en = currentEnemies[ti];
+            if(en.hp <= 0) continue;
+            var r = calcPlayerDamage(34, true, true); // 第三个参数 true 代表雷属性
+            var dmg = r.dmg;
+            if(en.statuses[STATUS.CONDUCT]){
+                dmg = Math.floor(dmg * 1.5);
+            }
+            en.hp = Math.max(0, en.hp - dmg);
+            totalDmg += dmg;
+            hitCount++;
+            if(r.isCrit) critAny = true;
+            applyStatus(en, STATUS.THUNDER, 4, 10);
+        }
+        msgBox.innerText += `\n霆落雷鸣——雷霆贯穿 ${hitCount} 名敌人，共造成 ${totalDmg} 伤害，全体附加【雷霆】。`;
+        if(critAny) msgBox.innerText += "（暴击！）";
+        playHeavyHit();
+        updateEnemyHpBar();
+        scrollMsgToBottom();
+        updateDebuffTag();
+        setTimeout(afterPlayerAction, 700);
+    }, 500);
+}
+function doEnergyGather(){
+    closeSubMenu();
+    if(liberationReady){
+        msgBox.innerText += "\n解放状态已激活";
+        enableActionButtons(true);
+        return;
+    }
+    energyChargeTurns++;
+    if(typeof playHealSound === "function") playHealSound();
+    if(energyChargeTurns < 2){
+        msgBox.innerText += "\n【能量聚集】充能中……（" + energyChargeTurns + "/2）";
+        scrollMsgToBottom();
+        setTimeout(afterPlayerAction, 600);
+    }else{
+        enterLiberation();
+        setTimeout(afterPlayerAction, 700);
+    }
+}
+
+function enterLiberation(){
+    liberationReady = true;
+    liberationEnergy = 100;
+    energyChargeTurns = 0;
+    msgBox.innerText += "\n【解放状态】漠然能量充满！伤害 +20%";
+    if(typeof playHeavyHit === "function") playHeavyHit();
+    if(typeof screenShake === "function") screenShake(5, 350);
+    var bu = document.getElementById("battleUI");
+    if(bu) bu.classList.add("liberation-mode");
+    updateLiberationButton();
+    updateBattleUI();
+    scrollMsgToBottom();
+}
+
+function exitLiberation(){
+    liberationReady = false;
+    liberationEnergy = 0;
+    msgBox.innerText += "\n【解放状态】能量耗尽。";
+    var bu = document.getElementById("battleUI");
+    if(bu) bu.classList.remove("liberation-mode");
+    updateLiberationButton();
+    updateBattleUI();
+    scrollMsgToBottom();
+}
+
+function updateLiberationButton(){
+    var btn = document.getElementById("btnScytheCut");
+    if(btn) btn.style.display = liberationReady ? "block" : "none";
+}
+function doLiberation(){
+    closeSubMenu();
+    if(!liberationReady){
+        msgBox.innerText += "\n解放状态未就绪。";
+        enableActionButtons(true);
+        return;
+    }
+    liberationReady = false;
+    liberationEnergy = 0;
+    updateLiberationButton();
+    var bu = document.getElementById("battleUI");
+    if(bu) bu.classList.remove("liberation-mode");
+    startScythe();
+}
+function doChamber(){
+    closeSubMenu();
+    if(predatorChamber.items.length === 0){
+        msgBox.innerText += "\n捕食室是空的。";
+        enableActionButtons(true);
+        return;
+    }
+    var item = predatorChamber.items.shift();
+    var heal = item.type === "shard" ? 35 : 18;
+    player.hp = Math.min(player.maxHp, player.hp + heal);
+    msgBox.innerText += "\n【捕食室】消化了 " + item.name + "，回复 " + heal + " HP。";
+    if(typeof playHealSound === "function") playHealSound();
+    updateBattleUI();
+    refreshAccessoryUI();
+    setTimeout(afterPlayerAction, 500);
+}
+var mokuComboReady = true;
+function warDanceHeal(){
+    if(!hasAccSpecial("warDance")) return;
+    var roll = Math.random();
+    var healed = [];
+    if(roll < 0.4){
+        player.hp = Math.min(player.maxHp, player.hp + 9);
+        healed.push("HP+9");
+    }else if(roll < 0.8){
+        player.mp = Math.min(player.maxMp, player.mp + 11);
+        healed.push("MP+11");
+    }else{
+        player.hp = Math.min(player.maxHp, player.hp + 9);
+        player.mp = Math.min(player.maxMp, player.mp + 11);
+        healed.push("HP+9", "MP+11");
+    }
+    msgBox.innerText += "\n【狂暴战舞之血】" + healed.join(" / ");
+    updateBattleUI();
+}
+function tryMokuCombo(){
+    if(!mokuComboReady) return false;
+    mokuComboReady = false;
+    setTimeout(function(){
+    mokuComboReady = true;
+}, 2500);
+    playComboSound();
+    playComboAnimation();
+    showMokuDialog("critHit");
+    setTimeout(function(){
+        var isCrit = Math.random() < 0.25;
+        var d = 40 * (isCrit ? 3 : 1);
+        d *= (1 + getAccSum("dmgBonus"));
+        d = Math.floor(d);
+        currentEnemy.hp = Math.max(0, currentEnemy.hp - d);
+        msgBox.innerText += "\n【漠然 · 攻击连携】" + (isCrit ? "致命一击！" : "") + "造成 " + d + " 伤害。";
+        playHitSound();
+        spawnSlash("white-slash", 160, 10, 0);
+        updateEnemyHpBar();
+        scrollMsgToBottom();
+        if(isAllEnemiesDead()) endBattle(true);
+    }, 250);
+    return true;
+}
+
+function playComboAnimation(){
+    var fx = document.getElementById("comboFx");
+    if(!fx) return;
+    fx.innerHTML = "";
+    fx.style.display = "block";
+
+    var flash = document.createElement("div");
+    flash.className = "comboFlash";
+    fx.appendChild(flash);
+
+    var line = document.createElement("div");
+    line.className = "comboLine";
+    line.style.left = "60px";
+    line.style.top = "35%";
+    line.style.width = "60%";
+    fx.appendChild(line);
+
+    var hit = document.createElement("div");
+    hit.className = "comboHit";
+    hit.style.left = "55%";
+    hit.style.top = "40%";
+    fx.appendChild(hit);
+
+    setTimeout(function(){
+        fx.style.display = "none";
+        fx.innerHTML = "";
+    }, 600);
+}
+function doShard(){
+    closeSubMenu();
+    const idx = inventory.findIndex(x => x.isItem && x.name === "终焉之匣碎片");
+    if(idx === -1){ msgBox.innerText += "\n没有可用的碎片。"; enableActionButtons(true); return; }
+    inventory.splice(idx, 1);
+    const dmg = 80;
+    currentEnemy.hp = Math.max(0, currentEnemy.hp - dmg);
+    msgBox.innerText += `\n终焉之匣空间短暂出现，造成 ${dmg} 的固定伤害。`;
+    playHeavyHit();
+    screenShake(10, 400);
+    updateEnemyHpBar();
+    scrollMsgToBottom();
+    refreshAccessoryUI();
+    setTimeout(afterPlayerAction, 700);
+}
+
+/* ---------- 斩击特效 ---------- */
+function spawnSlash(cls, length, thickness, delay){
+    const el = document.createElement("div");
+    el.className = "white-slash";
+    el.style.width = length + "px";
+    el.style.height = thickness + "px";
+    el.style.left = "50%";
+    el.style.top = "50%";
+    el.style.transform = `translate(-50%,-50%) rotate(${(Math.random()-0.5)*60}deg)`;
+    el.style.animation = `slashAnim 0.28s ease-out ${delay}ms forwards`;
+    slashContainer.appendChild(el);
+    setTimeout(()=> el.remove(), 400 + delay);
+}
+// 注入关键帧
+const styleEl = document.createElement("style");
+styleEl.textContent = `
+@keyframes slashAnim{
+    0%{ opacity:0; transform: translate(-50%,-50%) rotate(0deg) scaleX(0); }
+    40%{ opacity:1; transform: translate(-50%,-50%) rotate(0deg) scaleX(1); }
+    100%{ opacity:0; transform: translate(-50%,-50%) rotate(0deg) scaleX(1); }
+}`;
+document.head.appendChild(styleEl);
+
+/* ---------- 霆落雷鸣全屏特效 ---------- */
+function playThunderFx(){
+    const fx = document.getElementById("thunderFx");
+    fx.innerHTML = "";
+    fx.style.display = "block";
+
+    const veil = document.createElement("div");
+    veil.className = "thunderVeil";
+    fx.appendChild(veil);
+
+    for(let i = 0; i < 6; i++){
+        const bolt = document.createElement("div");
+        bolt.className = "bolt";
+        bolt.style.left = (10 + Math.random() * 80) + "%";
+        bolt.style.height = (60 + Math.random() * 40) + "%";
+        bolt.style.animationDelay = (i * 0.05) + "s";
+        bolt.style.transform = `rotate(${(Math.random()-0.5)*10}deg)`;
+        fx.appendChild(bolt);
+    }
+    playThunderSound();
+    setTimeout(()=>{ fx.style.display = "none"; fx.innerHTML = ""; }, 950);
+}
+
+/* ---------- 屏幕震动 ---------- */
+function screenShake(intensity = 6, duration = 300){
+    const start = performance.now();
+    function shake(){
+        const t = performance.now() - start;
+        if(t > duration){ canvas.style.transform = ""; return; }
+        const k = (1 - t/duration) * intensity;
+        canvas.style.transform = `translate(${(Math.random()-0.5)*k}px,${(Math.random()-0.5)*k}px)`;
+        requestAnimationFrame(shake);
+    }
+    shake();
+}
+
+/* ---------- 玩家行动后判定 ---------- */
+function isAllEnemiesDead(){
+    for(var i = 0; i < currentEnemies.length; i++){
+        if(currentEnemies[i].hp > 0) return false;
+    }
+    return true;
+}
+
+function afterPlayerAction(){
+    if(isAllEnemiesDead()){
+        endBattle(true);
+        return;
+    }
+    if(playerExtraTurn){
+        playerExtraTurn = false;
+        msgBox.innerText += "\n【额外回合】再次行动！";
+        enableActionButtons(true);
+        return;
+    }
+    setTimeout(enemyTurn, 400);
+}
+
+/* ---------- 敌人回合 ---------- */
+function enemyTurn(){
+    if(!battleActive) return;
+    
+    // 1. 结算所有敌人状态
+    for(var i = 0; i < currentEnemies.length; i++){
+        if(currentEnemies[i].hp > 0){
+            if(tickStatuses(currentEnemies[i])){
+                msgBox.innerText += "\n" + currentEnemies[i].name + " 因眩晕无法行动。";
+                currentEnemies[i].stunnedThisTurn = true;
+            } else {
+                currentEnemies[i].stunnedThisTurn = false;
+            }
+        }
+    }
+    
+    updateDebuffTag();
+    updateEnemyHpBar();
+    scrollMsgToBottom();
+    if(isAllEnemiesDead()){ endBattle(true); return; }
+    
+    // 2. 收集活着的且没被眩晕的敌人
+    var queue = [];
+    for(var i = 0; i < currentEnemies.length; i++){
+        if(currentEnemies[i].hp > 0 && !currentEnemies[i].stunnedThisTurn){
+            queue.push(i);
+        }
+    }
+    
+    // 3. 依次行动
+    runEnemyQueue(queue, 0);
+}
+
+function runEnemyQueue(queue, index){
+    if(!battleActive) return;
+    if(index >= queue.length){
+        setTimeout(function(){
+            try {
+                tickStatuses(player);
+                updateBattleUI();
+            } catch(e) {
+                console.log("状态刷新出错，但战斗继续", e);
+            }
+            if(player.hp <= 0){ endBattle(false); return; }
+            endEnemyTurn();
+        }, 400);
+        return;
+    }
+    
+    var ei = queue[index];
+    selectedEnemyIndex = ei;
+    var enemy = currentEnemies[ei];
+    
+    updateEnemyHpBar();
+    updateDebuffTag();
+    scrollMsgToBottom();
+    
+    doEnemySingleAction(enemy, function(){
+        if(!battleActive) return;
+        if(player.hp <= 0){ endBattle(false); return; }
+        if(enemy.hp <= 0){ updateEnemyHpBar(); }
+        setTimeout(function(){
+            runEnemyQueue(queue, index + 1);
+        }, 600);
+    });
+}
+
+function applyShieldDamage(dmg){
+    if(player.shield > 0){
+        var absorbed = Math.min(player.shield, dmg);
+        player.shield -= absorbed;
+        dmg -= absorbed;
+        if(absorbed > 0){
+            msgBox.innerText += ` 【护盾吸收 ${absorbed}】`;
+        }
+    }
+    return dmg;
+}
+
+function doEnemySingleAction(enemy, callback){
+    try {
+        // 1. 选取敌人招式
+        var moves = (enemy.moves && enemy.moves.length) ? enemy.moves : [{ name: "撞击", type: "phys", dmg: 10, hits: 1 }];
+        var mv = moves[Math.floor(Math.random() * moves.length)];
+
+        // 2. 奔狼召唤
+        if(enemy.name.indexOf("奔狼") >= 0 
+           && !enemy.howled
+           && enemy.hp / enemy.maxHp < 0.2 
+           && Math.random() < 0.4){
+            enemy.howled = true;
+            msgBox.innerText += "\n【狼群呼唤】远处传来回应的嚎叫……";
+            var summonCount = Math.random() < 0.5 ? 1 : 2;
+            for(var s = 0; s < summonCount; s++){
+                var wolfTpl = null;
+                for(var ti = 0; ti < ENEMY_TYPES.length; ti++){
+                    if(ENEMY_TYPES[ti].name === "奔狼"){ wolfTpl = ENEMY_TYPES[ti]; break; }
+                }
+                if(!wolfTpl) break;
+                currentEnemies.push({
+                    name: wolfTpl.name,
+                    faction: "野生",
+                    hp: wolfTpl.hp,
+                    maxHp: wolfTpl.hp,
+                    color: wolfTpl.color,
+                    moves: wolfTpl.moves.map(function(m){ return Object.assign({}, m); }),
+                    statuses: {}
+                });
+            }
+            msgBox.innerText += " 援军赶到（" + summonCount + " 只奔狼加入战斗）。";
+            playHeavyHit();
+            updateEnemyHpBar();
+            renderEnemyList();
+            scrollMsgToBottom();
+            setTimeout(callback, 800);
+            return;
+        }
+        
+        // 3. 伤害计算
+        var hits = mv.hits || 1;
+        var atkMul = 1;
+        if(enemy.statuses[STATUS.SUPPRESS]){
+            atkMul -= enemy.statuses[STATUS.SUPPRESS].value;
+            if (enemy.faction && enemy.faction.indexOf("何类生物（电虫）") !== -1) {
+    atkMul *= 1.3; 
+}
+        }
+        var total = 0;
+        for(var i = 0; i < hits; i++){
+            var dmg = mv.dmg * atkMul;
+            if(enemy.statuses[STATUS.CONDUCT] && mv.type === "elec") dmg *= 1.5;
+            total += dmg;
+        }
+
+        // 4. 混战逻辑判定目标
+        var isMelee = false;
+        var targetObj = null;
+        
+        if (enemy.faction) {
+            var hostileTargets = currentEnemies.filter(function(e){
+                return e.hp > 0 && e.faction && e.faction !== enemy.faction; 
+            });
+            // 60% 概率攻击敌对阵营
+            if (hostileTargets.length > 0 && Math.random() < 0.6) {
+                targetObj = hostileTargets[Math.floor(Math.random() * hostileTargets.length)];
+                isMelee = true;
+            }
+        }
+
+        // 5. 弹反 (仅在玩家被攻击时生效)
+        if (!isMelee && parryActive && mv.noParry){
+            parryActive = false;
+            msgBox.innerText += `\n【${mv.name}】无法弹反！`;
+            playHeavyHit();
+        } else if (!isMelee && parryActive){
+            parryActive = false;
+            var reflect = Math.floor(total * 0.6);
+            var selfDmg = Math.floor(total * 0.4);
+            enemy.hp = Math.max(0, enemy.hp - reflect);
+            selfDmg = Math.floor(selfDmg * calcEnemyDefenseMul());
+            selfDmg = applyShieldDamage(selfDmg);
+            player.hp = Math.max(0, player.hp - selfDmg);
+            msgBox.innerText += `\n你弹反了【${mv.name}】，反弹 ${reflect} 伤害，自身受到 ${selfDmg} 伤害。`;
+            playHeavyHit();
+            updateEnemyHpBar();
+            updateBattleUI();
+            scrollMsgToBottom();
+            setTimeout(callback, 400);
+            return;
+        }
+        
+        // 6. 攻击结算
+        total = Math.floor(total * calcEnemyDefenseMul());
+        
+        if (isMelee) {
+            // 【混战发生】：攻击其他阵营的敌人
+            var dmgTaken = total;
+            var logExtra = "";
+            if (targetObj.defending) {
+                dmgTaken = Math.floor(dmgTaken * 0.5);
+                logExtra = "（目标处于防御姿态，伤害减半）";
+                targetObj.defending = false; 
+            }
+            
+            targetObj.hp = Math.max(0, targetObj.hp - dmgTaken);
+            msgBox.innerText += `\n【混战】${enemy.name} 对 ${targetObj.name} 使用【${mv.name}】，造成 ${dmgTaken} 伤害。${logExtra}`;
+            playHitSound();
+            updateEnemyHpBar();
+            updateDebuffTag();
+            
+            if(mv.status && Math.random() < (mv.chance || 1)){
+                applyStatus(targetObj, mv.status, mv.turns, mv.value);
+                msgBox.innerText += ` ${targetObj.name} 被施加了【${STATUS_LABEL[mv.status]}】。`;
+            }
+            
+            if (isAllEnemiesDead()) {
+                setTimeout(function(){ endBattle(true); }, 500);
+                return;
+            }
+        } else {
+            // 【正常攻击】：攻击玩家
+            total = applyShieldDamage(total);
+            player.hp = Math.max(0, player.hp - total);
+            
+            msgBox.innerText += `\n${enemy.name} 对 你 使用【${mv.name}】，造成 ${total} 伤害。`;
+            if (total === 0 && player.shield > 0) msgBox.innerText += "（护盾完全吸收）";
+            
+            playHitSound();
+            showMokuDialog("hurtPlayer");
+            updateBattleUI();
+            
+            if(player.hp <= 0){ setTimeout(callback, 400); return; }
+            
+            // 附加状态给玩家
+            if(mv.status && Math.random() < (mv.chance || 1)){
+                var applied = applyStatus(player, mv.status, mv.turns, mv.value);
+                if(applied){
+                    msgBox.innerText += ` 你被施加了【${STATUS_LABEL[mv.status]}】。`;
+                    showMokuDialog("status");
+                }
+                if(mv.name === "消化液雾释放"){
+                    player.hallucinate = true;
+                    player.hallucinateTurns = 3;
+                    msgBox.innerText += ` 你陷入了【致幻】。`;
+                }
+            }
+        }
+        setTimeout(callback, 500);
+    } catch(e) {
+        console.error("敌人行动崩溃，已强制跳过:", e);
+        setTimeout(callback, 500); 
+    }
+}
+        
+/* ---------- 战斗结束 ---------- */
+function rollLoot(){
+    var roll = Math.random();
+    if(roll < 0.35){
+        return accessoryList[Math.floor(Math.random() * accessoryList.length)];
+    }else if(roll < 0.75){
+        return { name: "终焉之匣碎片", isItem: true };
+    }else{
+        return null;
+    }
+}
+
+function showVictoryScreen(exp, lootName){
+    var screen = document.getElementById("victoryScreen");
+    var content = document.getElementById("victoryContent");
+    if(!screen || !content) return;
+
+    var html = '<div class="victoryRow">经验 <span class="victoryNum">+' + exp + '</span></div>';
+    if(lootName){
+        html += '<div class="victoryRow">战利品 <span class="victoryLoot">' + lootName + '</span></div>';
+    }else{
+        html += '<div class="victoryRow victoryEmpty">无掉落</div>';
+    }
+    content.innerHTML = html;
+
+    screen.style.display = "flex";
+    screen.classList.remove("victoryAnim");
+    void screen.offsetWidth;
+    screen.classList.add("victoryAnim");
+
+    if(typeof playHealSound === "function") playHealSound();
+
+    setTimeout(function(){
+        screen.style.display = "none";
+        screen.classList.remove("victoryAnim");
+        battleUI.style.display = "none";
+        hideMokuDialog();
+        player.statuses = {};
+        playerExtraTurn = false;
+        
+        // 【核心修复】彻底清理战斗状态，解开所有锁
+        battleActive = false;
+        actionLock = false;
+        enableActionButtons(true);
+        updateBattleUI();
+        refreshAccessoryUI();
+    }, 2200);
+}
+
+function endBattle(win){
+    if (!battleActive) return; 
+    battleActive = false;
+    actionLock = false; // 【修复】强制重置操作锁
+    enableActionButtons(false);
+
+    try {
+        if(win){
+            // 经验计算
+            var expGain = 0;
+            for(var ei = 0; ei < currentEnemies.length; ei++){
+                expGain += Math.floor(currentEnemies[ei].maxHp / 2);
+            }
+            gainExp(expGain);
+            msgBox.innerText += "\n获得 " + expGain + " 经验。";
+            
+            // 战利品
+            var loot = rollLoot();
+            var lootName = loot ? loot.name : null;
+            if(loot){
+                inventory.push(loot);
+            }
+            // 显示胜利画面
+            showVictoryScreen(expGain, lootName);
+        }else{
+            // 玩家战败
+            if(reviveCount > 0){
+                reviveCount--;
+                msgBox.innerText += "\n你倒下了……【重生】剩余 " + reviveCount + " 次。";
+                showMokuDialog("hurtPlayer");
+                setTimeout(function(){
+                    player.hp = player.maxHp;
+                    player.statuses = {};
+                    playerExtraTurn = false;
+                    battleUI.style.display = "none";
+                    hideMokuDialog();
+                    updateBattleUI();
+                    refreshAccessoryUI();
+                    battleActive = false;
+                    actionLock = false;
+                    enableActionButtons(true);
+                }, 1400);
+            }else{
+                msgBox.innerText += "\n重生次数已用尽……一切归零，失去意识";
+                setTimeout(function(){
+                    reviveCount = MAX_REVIVE;
+                    player.hp = player.maxHp;
+                    player.x = TILE * 3;
+                    player.y = TILE * 3;
+                    player.statuses = {};
+                    playerExtraTurn = false;
+                    battleUI.style.display = "none";
+                    hideMokuDialog();
+                    updateBattleUI();
+                    refreshAccessoryUI();
+                    battleActive = false;
+                    actionLock = false;
+                    enableActionButtons(true);
+                }, 2000);
+            }
+        }
+    } catch(e) {
+        console.error("战斗结束崩溃，强制重置界面:", e);
+        // 【终极兜底】即使上面全报错，这里也必须把界面关掉，保证能接着玩
+        battleUI.style.display = "none";
+        battleActive = false;
+        actionLock = false;
+        enableActionButtons(true);
+        updateBattleUI();
+    }
+}
+/* =========================================================
+   饰品面板
+========================================================= */
+document.getElementById("apToggle").onclick = ()=>{
+    accessoryPanel.style.display = accessoryPanel.style.display === "block" ? "none" : "block";
+    renderAccessoryPanel();
+};
+document.getElementById("bagToggle").onclick = function(){
+    var p = document.getElementById("bagPanel");
+    p.style.display = (p.style.display === "block") ? "none" : "block";
+    renderBagPanel();
+};
+document.getElementById("bagToggle").onclick = function(){
+    var p = document.getElementById("bagPanel");
+    p.style.display = (p.style.display === "block") ? "none" : "block";
+    renderBagPanel();
+};
+
+function renderBagPanel(){
+    var list = document.getElementById("bagList");
+    if(!list) return;
+    list.innerHTML = "";
+    if(inventory.length === 0){
+        var empty = document.createElement("div");
+        empty.style.color = "#5a6478";
+        empty.innerText = "背包是空的";
+        list.appendChild(empty);
+        return;
+    }
+    inventory.forEach(function(item, i){
+        var d = document.createElement("div");
+        d.className = "ap-item";
+        d.innerHTML =
+            '<div class="aname">' + item.name + '</div>' +
+            '<div class="adesc">' + (item.desc || "—") + '</div>' +
+            '<div style="margin-top:6px;display:flex;gap:6px;">' +
+                '<button class="mini-btn bag-equip" data-i="' + i + '">装备</button>' +
+                '<button class="mini-btn bag-feed" data-i="' + i + '">放入捕食室</button>' +
+            '</div>';
+        list.appendChild(d);
+    });
+    list.querySelectorAll(".bag-equip").forEach(function(btn){
+        btn.onclick = function(e){
+            e.stopPropagation();
+            var i = parseInt(btn.dataset.i);
+            if(devMode){
+    equippedAccessories.push(inventory.splice(i, 1)[0]);
+}else{
+    var emptySlot = equippedAccessories.indexOf(null);
+    if(emptySlot === -1){ alert("三个槽都满了"); return; }
+    equippedAccessories[emptySlot] = inventory.splice(i, 1)[0];
+}
+            refreshAccessoryUI();
+            renderBagPanel();
+        };
+    });
+    list.querySelectorAll(".bag-feed").forEach(function(btn){
+        btn.onclick = function(e){
+            e.stopPropagation();
+            var i = parseInt(btn.dataset.i);
+            if(predatorChamber.items.length >= predatorChamber.capacity){
+                alert("捕食室已满"); return;
+            }
+            predatorChamber.items.push(inventory.splice(i, 1)[0]);
+            refreshAccessoryUI();
+            renderBagPanel();
+        };
+    });
+}
+function renderBagPanel(){
+    var list = document.getElementById("bagList");
+    list.innerHTML = "";
+    if(inventory.length === 0){
+        var empty = document.createElement("div");
+        empty.style.color = "#5a6478";
+        empty.innerText = "背包是空的";
+        list.appendChild(empty);
+        return;
+    }
+    inventory.forEach(function(item, i){
+        var d = document.createElement("div");
+        d.className = "ap-item";
+        d.innerHTML =
+            '<div class="aname">' + item.name + '</div>' +
+            '<div class="adesc">' + (item.desc || "—") + '</div>' +
+            '<div style="margin-top:6px;display:flex;gap:6px;">' +
+                '<button class="mini-btn bag-equip" data-i="' + i + '">装备</button>' +
+                '<button class="mini-btn ap-feed bag-feed" data-i="' + i + '">放入捕食室</button>' +
+            '</div>';
+        list.appendChild(d);
+    });
+    list.querySelectorAll(".bag-equip").forEach(function(btn){
+        btn.onclick = function(e){
+            e.stopPropagation();
+            var i = parseInt(btn.dataset.i);
+            var emptySlot = equippedAccessories.indexOf(null);
+            if(emptySlot === -1){ alert("三个槽都满了"); return; }
+            equippedAccessories[emptySlot] = inventory.splice(i, 1)[0];
+            refreshAccessoryUI();
+            renderBagPanel();
+        };
+    });
+    list.querySelectorAll(".bag-feed").forEach(function(btn){
+        btn.onclick = function(e){
+            e.stopPropagation();
+            var i = parseInt(btn.dataset.i);
+            if(predatorChamber.items.length >= predatorChamber.capacity){
+                alert("捕食室已满"); return;
+            }
+            predatorChamber.items.push(inventory.splice(i, 1)[0]);
+            refreshAccessoryUI();
+            renderBagPanel();
+        };
+    });
+}
+function renderAccessoryPanel(){
+    var list = document.getElementById("apList");
+    list.innerHTML = "";
+
+    // 三装备槽
+    equippedAccessories.forEach(function(acc, slot){
+        var d = document.createElement("div");
+        d.className = "ap-item equipped";
+        if(acc){
+            d.innerHTML = '<div class="aname">[槽' + (slot+1) + '] ' + acc.name + '（点此卸下）</div>' +
+                          '<div class="adesc">' + acc.desc + '</div>';
+        }else{
+            d.innerHTML = '<div class="aname">[槽' + (slot+1) + '] 空</div>';
+        }
+        d.onclick = function(){
+            if(acc){
+                inventory.push(acc);
+                equippedAccessories[slot] = null;
+                refreshAccessoryUI();
+                renderAccessoryPanel();
+            }
+        };
+        list.appendChild(d);
+    });
+
+    // 背包
+    var divider = document.createElement("div");
+    divider.style.cssText = "color:#5a6478;margin:8px 0;font-size:11px;";
+    divider.innerText = "── 背包 ──";
+    list.appendChild(divider);
+
+    if(inventory.length === 0){
+        var empty = document.createElement("div");
+        empty.style.color = "#5a6478";
+        empty.innerText = "背包里没有物品";
+        list.appendChild(empty);
+    }else{
+        inventory.forEach(function(acc, i){
+            var d = document.createElement("div");
+            d.className = "ap-item";
+            var extra = "";
+            if(acc.critOverride) extra = '<div class="stat">暴击率 → 150%</div>';
+            if(acc.immuneStun) extra = '<div class="stat">免疫眩晕</div>';
+            d.innerHTML =
+                '<div class="aname">' + acc.name + '</div>' +
+                '<div class="adesc">' + (acc.desc || "—") + '</div>' +
+                extra +
+                '<div style="margin-top:6px;display:flex;gap:6px;">' +
+                    '<button class="mini-btn ap-equip" data-i="' + i + '">装备</button>' +
+                    '<button class="mini-btn ap-feed" data-i="' + i + '">放入捕食室</button>' +
+                '</div>';
+            list.appendChild(d);
+        });
+    }
+
+    // 捕食室
+    var divider2 = document.createElement("div");
+    divider2.style.cssText = "color:#5a6478;margin:10px 0 8px;font-size:11px;";
+    divider2.innerText = "── 捕食室（" + predatorChamber.items.length + "/" + predatorChamber.capacity + "）──";
+    list.appendChild(divider2);
+
+    if(predatorChamber.items.length === 0){
+        var empty2 = document.createElement("div");
+        empty2.style.color = "#5a6478";
+        empty2.innerText = "捕食室内没有物品";
+        list.appendChild(empty2);
+    }else{
+        predatorChamber.items.forEach(function(item, i){
+            var d = document.createElement("div");
+            d.className = "ap-item";
+            d.innerHTML =
+                '<div class="aname">' + item.name + '</div>' +
+                '<div style="margin-top:6px;">' +
+                    '<button class="mini-btn ch-take" data-i="' + i + '">取回背包</button>' +
+                '</div>';
+            list.appendChild(d);
+        });
+    }
+
+    // 绑定按钮
+    list.querySelectorAll(".ap-equip").forEach(function(btn){
+        btn.onclick = function(e){
+            e.stopPropagation();
+            var i = parseInt(btn.dataset.i);
+            if(devMode){
+    equippedAccessories.push(inventory.splice(i, 1)[0]);
+}else{
+    var emptySlot = equippedAccessories.indexOf(null);
+    if(emptySlot === -1){ alert("三个槽都满了"); return; }
+    equippedAccessories[emptySlot] = inventory.splice(i, 1)[0];
+}
+            refreshAccessoryUI();
+            renderAccessoryPanel();
+        };
+    });
+
+    list.querySelectorAll(".ap-feed").forEach(function(btn){
+        btn.onclick = function(e){
+            e.stopPropagation();
+            var i = parseInt(btn.dataset.i);
+            if(predatorChamber.items.length >= predatorChamber.capacity){
+                alert("捕食室已满");
+                return;
+            }
+            var item = inventory.splice(i, 1)[0];
+            predatorChamber.items.push(item);
+            refreshAccessoryUI();
+            renderAccessoryPanel();
+        };
+    });
+
+    list.querySelectorAll(".ch-take").forEach(function(btn){
+        btn.onclick = function(e){
+            e.stopPropagation();
+            var i = parseInt(btn.dataset.i);
+            var item = predatorChamber.items.splice(i, 1)[0];
+            inventory.push(item);
+            refreshAccessoryUI();
+            renderAccessoryPanel();
+        };
+    });
+}
+
+/* =========================================================
+   主循环
+========================================================= */
+let lastT = performance.now();
+function loop(t){
+    const dt = Math.min(0.05, (t - lastT) / 1000);
+    lastT = t;
+    // 致幻特效显示控制
+var _hfx = document.getElementById("hallucinationFx");
+if(_hfx){
+    _hfx.style.display = (battleActive && player.hallucinate) ? "block" : "none";
+}
+
+    if(gameStarted && !battleActive){
+        player.update(dt);
+        moku.update(dt);
+        updateMapEnemies(dt);
+        refreshTimer -= dt;
+if(refreshTimer <= 0){
+    refreshTimer = REFRESH_INTERVAL;
+    refreshMapContent();
+}
+        checkMapCollisions();
+        updateCamera(player.x, player.y);
+        // 漠然气泡
+if(mokuBubble.timer > 0){
+    mokuBubble.timer -= dt;
+}else if(Math.random() < dt * 0.5){
+    mokuBubble.text = mokuIdleLines[Math.floor(Math.random() * mokuIdleLines.length)];
+    mokuBubble.timer = mokuBubble.maxTime;
+}
+    }
+// 致幻：血条乱跳（战斗中）
+if(battleActive && player.hallucinate && Math.random() < 0.15){
+    updateEnemyHpBar();
+}
+    // 渲染
+    ctx.fillStyle = "#070709";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    if(gameStarted){
+        // 地板
+        for(let r = 0; r < MAP_ROWS; r++){
+            for(let c = 0; c < MAP_COLS; c++){
+                const x = c * TILE - cam.x;
+                const y = r * TILE - cam.y;
+                if(x < -TILE || y < -TILE || x > canvas.width || y > canvas.height) continue;
+                if(map[r][c] === 1){
+                    ctx.fillStyle = "#1a1a22";
+                    ctx.fillRect(x, y, TILE, TILE);
+                    ctx.fillStyle = "#25252f";
+                    ctx.fillRect(x + 2, y + 2, TILE - 4, TILE - 4);
+                }else{
+                    ctx.fillStyle = ((r + c) % 2 === 0) ? "#101018" : "#0c0c14";
+                    ctx.fillRect(x, y, TILE, TILE);
+                }
+            }
+        }
+
+        // 宝箱、事件点
+        chestList.forEach(drawChest);
+        eventList.forEach(drawEventPoint);
+
+        // 敌人
+        mapEnemies.forEach(drawMapEnemy);
+
+        // 角色
+        moku.draw();
+        if(mokuBubble.timer > 0){
+    drawMokuBubble(moku.x - cam.x, moku.y - cam.y);
+}
+        player.draw();
+    }
+
+    // Toast
+    if(toastTimer > 0){
+        toastTimer -= dt;
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, toastTimer);
+        ctx.fillStyle = "#0a1020";
+        ctx.fillRect(canvas.width/2 - 180, 80, 360, 44);
+        ctx.strokeStyle = "#3a6bd8";
+        ctx.strokeRect(canvas.width/2 - 180, 80, 360, 44);
+        ctx.fillStyle = "#cfe4ff";
+        ctx.font = "16px system-ui";
+        ctx.textAlign = "center";
+        ctx.fillText(toastText, canvas.width/2, 108);
+        ctx.restore();
+    }
+
+    requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* =========================================================
+   启动
+========================================================= */
+startBtn.onclick = ()=>{
+    startScreen.style.display = "none";
+    gameStarted = true;
+    document.getElementById("joystick").style.display = "block";
+
+
+    refreshAccessoryUI();
+
+    updateBattleUI();
+    try { getAudioCtx().resume(); } catch(e){}
+};
+
+/* 防止页面滚动 */
+document.addEventListener("touchmove", e => {
+    if(e.target === joy || joy.contains(e.target)) return;
+    // 允许巨镰切割 canvas 内部触摸
+    var el = e.target;
+    while(el){
+        if(el.id === "scytheGame" || el.id === "scytheCanvas") return;
+        if(el.id === "accessoryPanel" || el.id === "bagPanel") return;
+        if(el.id === "apList" || el.id === "bagList") return;
+        if(el.id === "msgBox" || el.id === "battleUI") return;
+        el = el.parentElement;
+    }
+    e.preventDefault();
+}, { passive:false });
+// ========== 巨镰切割 演出 ==========
+var scythe = {
+    active: false, phase: "draw",
+    lines: [], curLine: null, drawing: false,
+    enemy: { x:0, y:0, vx:0, vy:0, r:12 },
+    frame: { x:0, y:0, w:0, h:0 },
+    hitCount: 0, spaceBreakTriggered: false, totalDamage: 0,
+    W:0, H:0, canvas: null, ctx: null,
+    rafId: 0, lastT: 0, phaseT: 0,
+    slashes: [], particles: [],
+    shake: { active: false, t: 0, intensity: 0 }
+};
+
+function startScythe(){
+    scythe.active = true;
+    scythe.phase = "draw";
+    scythe.lines = []; scythe.curLine = null; scythe.drawing = false;
+    scythe.hitCount = 0; scythe.spaceBreakTriggered = false; scythe.totalDamage = 0;
+    scythe.slashes = []; scythe.particles = [];
+    scythe.shake = { active:false, t:0, intensity:0 };
+    scythe.phaseT = 0;
+
+    var dom = document.getElementById("scytheGame");
+    dom.style.display = "flex";
+    var cv = document.getElementById("scytheCanvas");
+    scythe.canvas = cv;
+    scythe.ctx = cv.getContext("2d");
+
+    var w = Math.floor(Math.min(window.innerWidth * 0.92, 560));
+    var h = Math.floor(Math.min(window.innerHeight * 0.62, 480));
+    cv.width = w; cv.height = h;
+    cv.style.width = w + "px";
+    cv.style.height = h + "px";
+    scythe.W = w; scythe.H = h;
+
+    var m = 16;
+    scythe.frame = { x:m, y:m, w:w - m*2, h:h - m*2 };
+
+    document.getElementById("scytheLineCount").innerText = "0";
+    document.getElementById("scytheHint").innerText = "在框内划三条线";
+
+    cv.addEventListener("touchstart", scytheTouchStart, { passive: false });
+cv.addEventListener("touchmove", scytheTouchMove, { passive: false });
+cv.addEventListener("touchend", scytheTouchEnd, { passive: false });
+cv.addEventListener("mousedown", scytheMouseDown);
+cv.addEventListener("mousemove", scytheMouseMove);
+window.addEventListener("mouseup", scytheMouseUp);
+
+    scythe.lastT = performance.now();
+    scythe.rafId = requestAnimationFrame(scytheLoop);
+}
+
+function scytheLocalPos(e){
+    var r = scythe.canvas.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+}
+function scytheTouchStart(e){
+    e.preventDefault();
+    var t = e.touches[0];
+    scythePointerDown({ clientX: t.clientX, clientY: t.clientY });
+}
+function scytheTouchMove(e){
+    e.preventDefault();
+    var t = e.touches[0];
+    scythePointerMove({ clientX: t.clientX, clientY: t.clientY });
+}
+function scytheTouchEnd(e){
+    e.preventDefault();
+    scythePointerUp();
+}
+function scytheMouseDown(e){ scythePointerDown(e); }
+function scytheMouseMove(e){ scythePointerMove(e); }
+function scytheMouseUp(e){ scythePointerUp(); }
+
+function scythePointerDown(e){
+    if(!scythe.active || scythe.phase !== "draw") return;
+    if(scythe.lines.length >= 3) return;
+    scythe.drawing = true;
+    var p = scytheLocalPos(e);
+    scythe.curLine = { x1:p.x, y1:p.y, x2:p.x, y2:p.y, hitTime:0 };
+}
+function scythePointerMove(e){
+    if(!scythe.active || scythe.phase !== "draw" || !scythe.drawing) return;
+    var p = scytheLocalPos(e);
+    if(scythe.curLine){ scythe.curLine.x2 = p.x; scythe.curLine.y2 = p.y; }
+}
+function scythePointerUp(){
+    if(!scythe.active || scythe.phase !== "draw" || !scythe.drawing) return;
+    scythe.drawing = false;
+    if(scythe.curLine){
+        var L = scythe.curLine;
+        if(Math.hypot(L.x2-L.x1, L.y2-L.y1) > 20){
+            scythe.lines.push(L);
+            document.getElementById("scytheLineCount").innerText = scythe.lines.length;
+        }
+        scythe.curLine = null;
+    }
+    if(scythe.lines.length >= 3){
+        scythe.phase = "wait";
+        scythe.phaseT = 0;
+        document.getElementById("scytheHint").innerText = "碾碎……";
+        var fr = scythe.frame;
+        scythe.enemy.x = fr.x + fr.w/2;
+        scythe.enemy.y = fr.y + fr.h/2;
+        var spd = 340;
+        var ang = Math.random() * Math.PI * 2;
+        scythe.enemy.vx = Math.cos(ang) * spd;
+        scythe.enemy.vy = Math.sin(ang) * spd;
+    }
+}
+
+function scytheLoop(t){
+    if(!scythe.active) return;
+    var dt = Math.min(0.05, (t - scythe.lastT)/1000);
+    scythe.lastT = t;
+    updateScythe(dt);
+    drawScythe();
+    scythe.rafId = requestAnimationFrame(scytheLoop);
+}
+
+function updateScythe(dt){
+    if(scythe.shake.active){
+        scythe.shake.t -= dt;
+        if(scythe.shake.t <= 0) scythe.shake.active = false;
+    }
+    scythe.phaseT += dt;
+
+    if(scythe.phase === "wait"){
+        if(scythe.phaseT >= 0.3){ scythe.phase = "bounce"; scythe.phaseT = 0; }
+    }
+    else if(scythe.phase === "bounce"){
+        var e = scythe.enemy; var fr = scythe.frame;
+        e.x += e.vx * dt; e.y += e.vy * dt;
+        if(e.x - e.r < fr.x){ e.x = fr.x + e.r; e.vx = Math.abs(e.vx); }
+        if(e.x + e.r > fr.x + fr.w){ e.x = fr.x + fr.w - e.r; e.vx = -Math.abs(e.vx); }
+        if(e.y - e.r < fr.y){ e.y = fr.y + e.r; e.vy = Math.abs(e.vy); }
+        if(e.y + e.r > fr.y + fr.h){ e.y = fr.y + fr.h - e.r; e.vy = -Math.abs(e.vy); }
+
+        for(var i = 0; i < scythe.lines.length; i++){
+            var L = scythe.lines[i];
+            if(L.hitTime > 0) continue;
+            var d = distToSegment(e.x, e.y, L.x1, L.y1, L.x2, L.y2);
+            if(d < e.r + 4){
+                onLineHit(L, i);
+                if(scythe.spaceBreakTriggered) return;
+            }
+        }
+        if(scythe.phaseT > 5) endScythe();
+    }
+    else if(scythe.phase === "spaceBreak"){
+        if(scythe.phaseT > 1.6) endScythe();
+    }
+
+    for(var i = scythe.slashes.length - 1; i >= 0; i--){
+        scythe.slashes[i].life -= dt;
+        if(scythe.slashes[i].life <= 0) scythe.slashes.splice(i, 1);
+    }
+    for(var i = scythe.particles.length - 1; i >= 0; i--){
+        var p = scythe.particles[i];
+        p.x += p.vx * dt; p.y += p.vy * dt;
+        p.vy += 400 * dt; p.life -= dt;
+        if(p.life <= 0) scythe.particles.splice(i, 1);
+    }
+}
+
+function distToSegment(px, py, x1, y1, x2, y2){
+    var dx = x2 - x1, dy = y2 - y1;
+    var len2 = dx*dx + dy*dy;
+    if(len2 === 0) return Math.hypot(px-x1, py-y1);
+    var t = ((px-x1)*dx + (py-y1)*dy) / len2;
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(px-(x1+t*dx), py-(y1+t*dy));
+}
+
+function onLineHit(line, idx){
+    var now = performance.now();
+    line.hitTime = now;
+    scythe.hitCount++;
+
+    var trigger = false;
+    for(var i = 0; i < scythe.lines.length; i++){
+        if(i === idx) continue;
+        var other = scythe.lines[i];
+        if(other.hitTime > 0 && Math.abs(other.hitTime - now) < 200){
+            trigger = true; break;
+        }
+    }
+
+    var rate = getCritRate();
+    var isCrit = Math.random() < Math.min(rate, 1);
+    var overflow = Math.max(0, rate - 1);
+    var dmg = 35;
+    if(isCrit) dmg *= (1.5 + overflow);
+    dmg *= (1 + getAccSum("dmgBonus"));
+    if(liberationReady) dmg *= 1.2;
+    dmg = Math.floor(dmg);
+    currentEnemy.hp = Math.max(0, currentEnemy.hp - dmg);
+    scythe.totalDamage += dmg;
+    updateEnemyHpBar();
+
+    scythe.slashes.push({
+        x1: line.x1, y1: line.y1, x2: line.x2, y2: line.y2,
+        life: 0.5, maxLife: 0.5
+    });
+    spawnGlassParticles(scythe.enemy.x, scythe.enemy.y);
+    if(typeof playHitSound === "function") playHitSound();
+    scythe.shake.active = true; scythe.shake.t = 0.15; scythe.shake.intensity = 6;
+
+    if(isCrit && typeof tryMokuCombo === "function") tryMokuCombo();
+
+    if(trigger && !scythe.spaceBreakTriggered){
+        triggerSpaceBreak();
+    }else if(!trigger){
+        var allHit = true;
+        for(var i = 0; i < scythe.lines.length; i++){
+            if(scythe.lines[i].hitTime === 0){ allHit = false; break; }
+        }
+        if(allHit) endScythe();
+    }
+}
+
+function triggerSpaceBreak(){
+    scythe.spaceBreakTriggered = true;
+    scythe.phase = "spaceBreak";
+    scythe.phaseT = 0;
+
+    var txt = document.getElementById("spaceBreakText");
+    txt.style.display = "block";
+    txt.className = "";
+    void txt.offsetWidth;
+    txt.className = "spaceBreakAnim";
+
+    if(typeof playThunderSound === "function") playThunderSound();
+
+    var cuts = 0;
+    var iv = setInterval(function(){
+        cuts++;
+        var d = Math.floor(currentEnemy.hp * 0.2);
+        if(d < 1) d = 1;
+        currentEnemy.hp = Math.max(0, currentEnemy.hp - d);
+        scythe.totalDamage += d;
+        updateEnemyHpBar();
+
+        flashScreen(cuts % 2 === 1 ? "screenFlashWhite" : "screenFlashBlack");
+        scythe.shake.active = true; var ramp = cuts / 5;
+scythe.shake.t = 0.3 + ramp * 0.4;
+scythe.shake.intensity = 8 + ramp * 50 + Math.random() * 8;; scythe.shake.intensity = 16;
+        spawnGlassParticles(scythe.enemy.x + (Math.random()-0.5)*40, scythe.enemy.y + (Math.random()-0.5)*40);
+        if(typeof playHitSound === "function") playHitSound();
+
+        if(currentEnemy.hp <= 0 || cuts >= 5){
+            clearInterval(iv);
+            setTimeout(function(){
+                txt.style.display = "none";
+                endScythe();
+            }, 500);
+        }
+    }, 380);
+}
+
+function flashScreen(cls){
+    var el = document.getElementById("screenFlash");
+    if(!el) return;
+    el.className = cls;
+    el.style.display = "block";
+    setTimeout(function(){ el.style.display = "none"; el.className = ""; }, 200);
+}
+
+function spawnGlassParticles(x, y){
+    for(var i = 0; i < 10; i++){
+        var ang = Math.random() * Math.PI * 2;
+        var spd = 80 + Math.random() * 200;
+        scythe.particles.push({
+            x:x, y:y,
+            vx: Math.cos(ang)*spd, vy: Math.sin(ang)*spd - 100,
+            life: 0.6 + Math.random()*0.3,
+            size: 3 + Math.random()*4
+        });
+    }
+}
+
+    function endScythe(){
+    if(!scythe.active) return;
+    scythe.active = false;
+    cancelAnimationFrame(scythe.rafId);
+
+    var cv = scythe.canvas;
+    cv.removeEventListener("touchstart", scytheTouchStart);
+    cv.removeEventListener("touchmove", scytheTouchMove);
+    cv.removeEventListener("touchend", scytheTouchEnd);
+    cv.removeEventListener("mousedown", scytheMouseDown);
+    cv.removeEventListener("mousemove", scytheMouseMove);
+    window.removeEventListener("mouseup", scytheMouseUp);
+
+    document.getElementById("scytheGame").style.display = "none";
+    document.getElementById("spaceBreakText").style.display = "none";
+
+    msgBox.innerText += "\n【巨镰切割】命中 " + scythe.hitCount + " 刀，共造成 " + scythe.totalDamage + " 伤害。";
+    scrollMsgToBottom();
+
+    if(isAllEnemiesDead()){ endBattle(true); return; }
+    setTimeout(afterPlayerAction, 500);
+}
+
+function drawScythe(){
+    var c = scythe.ctx;
+    if(!c) return;
+    var W = scythe.W, H = scythe.H;
+
+    var sx = 0, sy = 0;
+    if(scythe.shake.active){
+        sx = (Math.random()-0.5) * scythe.shake.intensity;
+        sy = (Math.random()-0.5) * scythe.shake.intensity;
+    }
+    c.setTransform(1,0,0,1,0,0);
+    c.clearRect(0,0,W,H);
+    c.fillStyle = "#080c16";
+    c.fillRect(0,0,W,H);
+    c.translate(sx, sy);
+
+    var fr = scythe.frame;
+    c.strokeStyle = "#6ad8ff"; c.lineWidth = 2;
+    c.shadowColor = "#2a5a8a"; c.shadowBlur = 14;
+    c.strokeRect(fr.x, fr.y, fr.w, fr.h);
+    c.shadowBlur = 0;
+
+    c.strokeStyle = "rgba(60,100,160,0.12)"; c.lineWidth = 1;
+    for(var x = fr.x; x < fr.x + fr.w; x += 40){
+        c.beginPath(); c.moveTo(x, fr.y); c.lineTo(x, fr.y+fr.h); c.stroke();
+    }
+    for(var y = fr.y; y < fr.y + fr.h; y += 40){
+        c.beginPath(); c.moveTo(fr.x, y); c.lineTo(fr.x+fr.w, y); c.stroke();
+    }
+
+    for(var i = 0; i < scythe.lines.length; i++){
+        var L = scythe.lines[i];
+        var alpha = L.hitTime > 0 ? 0.25 : 1;
+        c.strokeStyle = "rgba(200,220,255," + alpha + ")";
+        c.lineWidth = 3; c.lineCap = "round";
+        c.shadowColor = "#9fe8ff"; c.shadowBlur = 10;
+        c.beginPath(); c.moveTo(L.x1, L.y1); c.lineTo(L.x2, L.y2); c.stroke();
+        c.shadowBlur = 0;
+    }
+    if(scythe.curLine){
+        var CL = scythe.curLine;
+        c.strokeStyle = "rgba(255,220,150,0.9)"; c.lineWidth = 3;
+        c.beginPath(); c.moveTo(CL.x1, CL.y1); c.lineTo(CL.x2, CL.y2); c.stroke();
+    }
+
+    if(scythe.phase !== "draw"){
+        var e = scythe.enemy;
+        var grad = c.createRadialGradient(e.x, e.y, 2, e.x, e.y, e.r + 6);
+        grad.addColorStop(0, "#ffffff");
+        grad.addColorStop(0.4, "#6ad8ff");
+        grad.addColorStop(1, "rgba(30,60,120,0)");
+        c.fillStyle = grad;
+        c.beginPath(); c.arc(e.x, e.y, e.r + 6, 0, Math.PI*2); c.fill();
+        c.fillStyle = "#4a1a7a";
+        c.beginPath(); c.arc(e.x, e.y, e.r * 0.6, 0, Math.PI*2); c.fill();
+    }
+
+    for(var i = 0; i < scythe.slashes.length; i++){
+    var s = scythe.slashes[i];
+    var k = s.life / s.maxLife;
+    var dx = s.x2 - s.x1;
+    var dy = s.y2 - s.y1;
+    var len = Math.hypot(dx, dy);
+    if(len > 0){
+        var ex = dx / len * W * 2;
+        var ey = dy / len * W * 2;
+        // 暗蓝色贯穿斩
+        c.save();
+        c.globalAlpha = k * 0.85;
+        c.strokeStyle = "#1a3a8a";
+        c.lineWidth = 14 * k + 3;
+        c.shadowColor = "#3a6bd8"; c.shadowBlur = 30;
+        c.lineCap = "round";
+        c.beginPath();
+        c.moveTo(s.x1 - ex, s.y1 - ey);
+        c.lineTo(s.x1 + ex, s.y1 + ey);
+        c.stroke();
+        c.restore();
+    }
+    // 白色核心
+    c.save();
+    c.globalAlpha = k;
+    c.strokeStyle = "#ffffff";
+    c.lineWidth = 8 * k + 2;
+    c.shadowColor = "#fff"; c.shadowBlur = 24;
+    c.lineCap = "round";
+    c.beginPath(); c.moveTo(s.x1, s.y1); c.lineTo(s.x2, s.y2); c.stroke();
+    c.restore();
+}
+
+    for(var i = 0; i < scythe.particles.length; i++){
+        var p = scythe.particles[i];
+        c.save();
+        c.globalAlpha = Math.min(1, p.life * 2);
+        c.fillStyle = "#cfe8ff";
+        c.translate(p.x, p.y);
+        c.rotate(p.life * 8);
+        c.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+        c.restore();
+    }
+    c.setTransform(1,0,0,1,0,0);
+}
+/* ========== 开发者模式 ========== */
+var devMode = false;
+var devState = {
+    bagClicks: 0,
+    timer: null,
+    armed: false,
+    touchStartY: 0
+};
+
+function setupDevMode(){
+    var bagBtn = document.getElementById("bagToggle");
+    var apPanel = document.getElementById("accessoryPanel");
+
+    // 连点背包两次 → 待命
+    if(bagBtn){
+        bagBtn.addEventListener("click", function(){
+            if(devState.armed) return;
+            devState.bagClicks++;
+            if(devState.timer) clearTimeout(devState.timer);
+            devState.timer = setTimeout(function(){
+                devState.bagClicks = 0;
+            }, 600);
+            if(devState.bagClicks >= 2){
+                devState.armed = true;
+                devState.bagClicks = 0;
+                if(devState.timer) clearTimeout(devState.timer);
+            }
+        });
+    }
+
+    // 在饰品面板内向下滑 → 触发
+    if(apPanel){
+        apPanel.addEventListener("touchstart", function(e){
+            if(!devState.armed) return;
+            devState.touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+
+        apPanel.addEventListener("touchmove", function(e){
+            if(!devState.armed) return;
+            var dy = e.touches[0].clientY - devState.touchStartY;
+            if(dy > 50){
+                devState.armed = false;
+                triggerDevMode();
+            }
+        }, { passive: true });
+    }
+}
+
+function triggerDevMode(){
+    devMode = true;
+    accessoryList.forEach(function(acc){
+        var exists = inventory.some(function(x){ return x.name === acc.name; });
+        if(!exists) inventory.push(acc);
+    });
+    for(var i = 0; i < 5; i++){
+        inventory.push({ name: "终焉之匣碎片", isItem: true });
+    }
+    refreshAccessoryUI();
+    if(typeof renderAccessoryPanel === "function") renderAccessoryPanel();
+    if(typeof renderBagPanel === "function") renderBagPanel();
+    showDevToast("★ 开发者模式：已获得所有饰品呢喵★");
+}
+
+function showDevToast(text){
+    var el = document.createElement("div");
+    el.style.cssText =
+        "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);" +
+        "background:rgba(40,80,120,0.95);color:#cfe8ff;padding:16px 28px;" +
+        "border:2px solid #6ad8ff;border-radius:8px;font-size:16px;z-index:999;" +
+        "box-shadow:0 0 30px #6ad8ff;font-family:system-ui;";
+    el.innerText = text;
+    document.body.appendChild(el);
+    setTimeout(function(){
+        el.style.transition = "opacity 0.5s";
+        el.style.opacity = "0";
+        setTimeout(function(){ el.remove(); }, 500);
+    }, 1500);
+}
+
+// 启动时初始化
+setTimeout(setupDevMode, 100);
+</script>
+</body>
+</html>
+```
